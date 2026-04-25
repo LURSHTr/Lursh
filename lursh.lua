@@ -1,0 +1,183 @@
+local player = game.Players.LocalPlayer
+local gui = player:WaitForChild("PlayerGui")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- UI
+local screen = Instance.new("ScreenGui", gui)
+screen.IgnoreGuiInset = true
+
+local frame = Instance.new("Frame", screen)
+frame.Size = UDim2.new(0,220,0,300)
+frame.Position = UDim2.new(0.5,-110,0,10)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,25)
+title.Text = "LURSH"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundColor3 = Color3.fromRGB(0,0,0)
+title.TextScaled = true
+
+task.spawn(function()
+    local h = 0
+    while true do
+        h = (h + 0.01) % 1
+        title.TextColor3 = Color3.fromHSV(h,1,1)
+        RunService.RenderStepped:Wait()
+    end
+end)
+
+-- Inputs
+local speedBox = Instance.new("TextBox", frame)
+speedBox.Position = UDim2.new(0,10,0,35)
+speedBox.Size = UDim2.new(0,90,0,20)
+speedBox.PlaceholderText = "SPEED"
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+local jumpBox = Instance.new("TextBox", frame)
+jumpBox.Position = UDim2.new(0,120,0,35)
+jumpBox.Size = UDim2.new(0,90,0,20)
+jumpBox.PlaceholderText = "JUMP"
+jumpBox.TextColor3 = Color3.new(1,1,1)
+jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+-- Button helper
+local function btn(text,y)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(0,180,0,22)
+    b.Position = UDim2.new(0.5,-90,0,y)
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(0,60,150)
+    b.TextColor3 = Color3.new(1,1,1)
+    return b
+end
+
+local apply = btn("Apply",65)
+local reset = btn("Reset",95)
+local flyBtn = btn("Fly: OFF",125)
+local noclipBtn = btn("Noclip: OFF",155)
+local infBtn = btn("Infinity Jump: OFF",185)
+local closeBtn = btn("Close GUI",215)
+
+-- States
+local flying = false
+local noclip = false
+local infJump = false
+local flySpeed = 50
+
+-- Fly slider
+local bar = Instance.new("Frame", frame)
+bar.Size = UDim2.new(0,180,0,8)
+bar.Position = UDim2.new(0.5,-90,0,245)
+bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+local fill = Instance.new("Frame", bar)
+fill.Size = UDim2.new(0.5,0,1,0)
+fill.BackgroundColor3 = Color3.fromRGB(0,60,150)
+
+local dragging = false
+
+bar.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+
+bar.InputEnded:Connect(function()
+    dragging = false
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local x = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
+        fill.Size = UDim2.new(x,0,1,0)
+        flySpeed = math.floor(20 + x*180)
+    end
+end)
+
+-- Buttons
+flyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+    noclip = not noclip
+    noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF"
+end)
+
+infBtn.MouseButton1Click:Connect(function()
+    infJump = not infJump
+    infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
+end)
+
+apply.MouseButton1Click:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = tonumber(speedBox.Text) or 16
+        hum.JumpPower = tonumber(jumpBox.Text) or 50
+    end
+end)
+
+reset.MouseButton1Click:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = 16
+        hum.JumpPower = 50
+    end
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    screen:Destroy()
+end)
+
+-- Systems
+RunService.RenderStepped:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    -- Infinity jump
+    if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
+        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+
+    -- Noclip
+    if noclip and char then
+        for _,v in pairs(char:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+
+    -- Fly
+    if flying and root then
+        local cam = workspace.CurrentCamera
+        local move = Vector3.zero
+
+        if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then move += Vector3.new(0,1,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
+
+        if move.Magnitude > 0 then
+            root.Velocity = move.Unit * flySpeed
+        end
+    end
+end)
+
+-- RightShift toggle
+UIS.InputBegan:Connect(function(i,gp)
+    if gp then return end
+    if i.KeyCode == Enum.KeyCode.RightShift then
+        screen.Enabled = not screen.Enabled
+    end
+end)
