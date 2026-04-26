@@ -6,11 +6,48 @@ local RunService = game:GetService("RunService")
 -- UI
 local screen = Instance.new("ScreenGui", gui)
 screen.IgnoreGuiInset = true
+screen.ResetOnSpawn = false -- ✅ ölünce gitmez
 
 local frame = Instance.new("Frame", screen)
 frame.Size = UDim2.new(0,220,0,300)
 frame.Position = UDim2.new(0.5,-110,0,10)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+
+-- DRAG SYSTEM ✅
+local draggingUI = false
+local dragInput, dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingUI = true
+        dragStart = input.Position
+        startPos = frame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                draggingUI = false
+            end
+        end)
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and draggingUI then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 -- Title
 local title = Instance.new("TextLabel", frame)
