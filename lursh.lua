@@ -6,14 +6,14 @@ local RunService = game:GetService("RunService")
 -- UI
 local screen = Instance.new("ScreenGui", gui)
 screen.IgnoreGuiInset = true
-screen.ResetOnSpawn = false -- ✅ ölünce gitmez
+screen.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screen)
 frame.Size = UDim2.new(0,220,0,300)
 frame.Position = UDim2.new(0.5,-110,0,10)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 
--- DRAG SYSTEM ✅
+-- DRAG
 local draggingUI = false
 local dragInput, dragStart, startPos
 
@@ -53,7 +53,6 @@ end)
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,25)
 title.Text = "LURSH"
-title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundColor3 = Color3.fromRGB(0,0,0)
 title.TextScaled = true
 
@@ -81,7 +80,7 @@ jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- Button helper
+-- Button
 local function btn(text,y)
     local b = Instance.new("TextButton", frame)
     b.Size = UDim2.new(0,180,0,22)
@@ -104,8 +103,9 @@ local flying = false
 local noclip = false
 local infJump = false
 local flySpeed = 50
+local currentSpeed = 16 -- ✅ FIX
 
--- Fly slider
+-- Slider
 local bar = Instance.new("Frame", frame)
 bar.Size = UDim2.new(0,180,0,8)
 bar.Position = UDim2.new(0.5,-90,0,245)
@@ -136,6 +136,26 @@ UIS.InputChanged:Connect(function(i)
 end)
 
 -- Buttons
+apply.MouseButton1Click:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        currentSpeed = tonumber(speedBox.Text) or 16
+        hum.WalkSpeed = currentSpeed
+        hum.JumpPower = tonumber(jumpBox.Text) or 50
+    end
+end)
+
+reset.MouseButton1Click:Connect(function()
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        currentSpeed = 16
+        hum.WalkSpeed = 16
+        hum.JumpPower = 50
+    end
+end)
+
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
@@ -151,24 +171,6 @@ infBtn.MouseButton1Click:Connect(function()
     infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
 end)
 
-apply.MouseButton1Click:Connect(function()
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = tonumber(speedBox.Text) or 16
-        hum.JumpPower = tonumber(jumpBox.Text) or 50
-    end
-end)
-
-reset.MouseButton1Click:Connect(function()
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = 16
-        hum.JumpPower = 50
-    end
-end)
-
 closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
@@ -178,6 +180,13 @@ RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
+
+    -- ✅ SPEED FIX
+    if hum and currentSpeed then
+        if hum.WalkSpeed ~= currentSpeed then
+            hum.WalkSpeed = currentSpeed
+        end
+    end
 
     -- Infinity jump
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
@@ -211,7 +220,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- RightShift toggle
+-- Toggle GUI
 UIS.InputBegan:Connect(function(i,gp)
     if gp then return end
     if i.KeyCode == Enum.KeyCode.RightShift then
