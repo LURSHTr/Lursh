@@ -9,7 +9,7 @@ screen.IgnoreGuiInset = true
 screen.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", screen)
-frame.Size = UDim2.new(0,220,0,300)
+frame.Size = UDim2.new(0,220,0,320)
 frame.Position = UDim2.new(0.5,-110,0,10)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 
@@ -49,11 +49,47 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Title
-local title = Instance.new("TextLabel", frame)
+-- TABS
+local mainTab = Instance.new("TextButton", frame)
+mainTab.Size = UDim2.new(0.5,0,0,25)
+mainTab.Position = UDim2.new(0,0,0,0)
+mainTab.Text = "Main"
+mainTab.BackgroundColor3 = Color3.fromRGB(20,20,20)
+
+local bindTab = Instance.new("TextButton", frame)
+bindTab.Size = UDim2.new(0.5,0,0,25)
+bindTab.Position = UDim2.new(0.5,0,0,0)
+bindTab.Text = "Bind"
+bindTab.BackgroundColor3 = Color3.fromRGB(10,10,10)
+
+-- FRAMES
+local mainFrame = Instance.new("Frame", frame)
+mainFrame.Size = UDim2.new(1,0,1,-25)
+mainFrame.Position = UDim2.new(0,0,0,25)
+mainFrame.BackgroundTransparency = 1
+
+local bindFrame = Instance.new("Frame", frame)
+bindFrame.Size = UDim2.new(1,0,1,-25)
+bindFrame.Position = UDim2.new(0,0,0,25)
+bindFrame.BackgroundTransparency = 1
+bindFrame.Visible = false
+
+-- TAB SWITCH
+mainTab.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    bindFrame.Visible = false
+end)
+
+bindTab.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    bindFrame.Visible = true
+end)
+
+-- TITLE
+local title = Instance.new("TextLabel", mainFrame)
 title.Size = UDim2.new(1,0,0,25)
 title.Text = "LURSH"
-title.BackgroundColor3 = Color3.fromRGB(0,0,0)
+title.BackgroundTransparency = 1
 title.TextScaled = true
 
 task.spawn(function()
@@ -65,24 +101,24 @@ task.spawn(function()
     end
 end)
 
--- Inputs
-local speedBox = Instance.new("TextBox", frame)
+-- INPUTS
+local speedBox = Instance.new("TextBox", mainFrame)
 speedBox.Position = UDim2.new(0,10,0,35)
 speedBox.Size = UDim2.new(0,90,0,20)
 speedBox.PlaceholderText = "SPEED"
 speedBox.TextColor3 = Color3.new(1,1,1)
 speedBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
-local jumpBox = Instance.new("TextBox", frame)
+local jumpBox = Instance.new("TextBox", mainFrame)
 jumpBox.Position = UDim2.new(0,120,0,35)
 jumpBox.Size = UDim2.new(0,90,0,20)
 jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- Button
+-- BUTTON FUNCTION
 local function btn(text,y)
-    local b = Instance.new("TextButton", frame)
+    local b = Instance.new("TextButton", mainFrame)
     b.Size = UDim2.new(0,180,0,22)
     b.Position = UDim2.new(0.5,-90,0,y)
     b.Text = text
@@ -98,15 +134,24 @@ local noclipBtn = btn("Noclip: OFF",155)
 local infBtn = btn("Infinity Jump: OFF",185)
 local closeBtn = btn("Close GUI",215)
 
--- States
+-- STATES
 local flying = false
 local noclip = false
 local infJump = false
 local flySpeed = 50
-local currentSpeed = 16 -- ✅ FIX
+local currentSpeed = 16
 
--- Slider
-local bar = Instance.new("Frame", frame)
+-- BINDS
+local binds = {
+    Fly = Enum.KeyCode.F,
+    Noclip = Enum.KeyCode.N,
+    InfJump = Enum.KeyCode.J
+}
+
+local waitingForBind = nil
+
+-- SLIDER
+local bar = Instance.new("Frame", mainFrame)
 bar.Size = UDim2.new(0,180,0,8)
 bar.Position = UDim2.new(0.5,-90,0,245)
 bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
@@ -135,7 +180,7 @@ UIS.InputChanged:Connect(function(i)
     end
 end)
 
--- Buttons
+-- BUTTON ACTIONS
 apply.MouseButton1Click:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -175,25 +220,89 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- Systems
+-- BIND UI
+local function createBind(name, y)
+    local label = Instance.new("TextLabel", bindFrame)
+    label.Size = UDim2.new(0,100,0,25)
+    label.Position = UDim2.new(0,10,0,y)
+    label.Text = name
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.new(1,1,1)
+
+    local button = Instance.new("TextButton", bindFrame)
+    button.Size = UDim2.new(0,80,0,25)
+    button.Position = UDim2.new(1,-90,0,y)
+    button.Text = binds[name].Name
+    button.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+    button.MouseButton1Click:Connect(function()
+        button.Text = "..."
+        waitingForBind = name
+    end)
+
+    return button
+end
+
+local flyBindBtn = createBind("Fly", 10)
+local noclipBindBtn = createBind("Noclip", 45)
+local infBindBtn = createBind("InfJump", 80)
+
+-- INPUT SYSTEM
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+
+    -- bind set
+    if waitingForBind then
+        binds[waitingForBind] = input.KeyCode
+
+        if waitingForBind == "Fly" then
+            flyBindBtn.Text = input.KeyCode.Name
+        elseif waitingForBind == "Noclip" then
+            noclipBindBtn.Text = input.KeyCode.Name
+        elseif waitingForBind == "InfJump" then
+            infBindBtn.Text = input.KeyCode.Name
+        end
+
+        waitingForBind = nil
+        return
+    end
+
+    -- bind usage
+    if input.KeyCode == binds.Fly then
+        flying = not flying
+        flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+    end
+
+    if input.KeyCode == binds.Noclip then
+        noclip = not noclip
+        noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF"
+    end
+
+    if input.KeyCode == binds.InfJump then
+        infJump = not infJump
+        infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
+    end
+
+    -- GUI toggle
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        screen.Enabled = not screen.Enabled
+    end
+end)
+
+-- SYSTEM LOOP
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
-    -- ✅ SPEED FIX
-    if hum and currentSpeed then
-        if hum.WalkSpeed ~= currentSpeed then
-            hum.WalkSpeed = currentSpeed
-        end
+    if hum then
+        hum.WalkSpeed = currentSpeed
     end
 
-    -- Infinity jump
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 
-    -- Noclip
     if noclip and char then
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -202,7 +311,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Fly
     if flying and root then
         local cam = workspace.CurrentCamera
         local move = Vector3.zero
@@ -217,13 +325,5 @@ RunService.RenderStepped:Connect(function()
         if move.Magnitude > 0 then
             root.Velocity = move.Unit * flySpeed
         end
-    end
-end)
-
--- Toggle GUI
-UIS.InputBegan:Connect(function(i,gp)
-    if gp then return end
-    if i.KeyCode == Enum.KeyCode.RightShift then
-        screen.Enabled = not screen.Enabled
     end
 end)
