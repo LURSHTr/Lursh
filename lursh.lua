@@ -234,6 +234,8 @@ local function createBind(name, y)
     button.Position = UDim2.new(1,-90,0,y)
     button.Text = binds[name].Name
     button.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    button.TextColor3 = Color3.new(1,1,1) -- ✅ BEYAZ YAZI
+    button.TextScaled = true
 
     button.MouseButton1Click:Connect(function()
         button.Text = "..."
@@ -283,8 +285,8 @@ UIS.InputBegan:Connect(function(input, gp)
         infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
     end
 
-    -- GUI toggle
-    if input.KeyCode == Enum.KeyCode.RightShift then
+    -- ✅ SOL CTRL GUI TOGGLE
+    if input.KeyCode == Enum.KeyCode.LeftControl then
         screen.Enabled = not screen.Enabled
     end
 end)
