@@ -48,31 +48,77 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- STATES
-local flying = false
-local noclip = false
-local infJump = false
-local flySpeed = 60
-local currentSpeed = 16
-local bv
+-- TABS
+local mainTab = Instance.new("TextButton", frame)
+mainTab.Size = UDim2.new(0.5,0,0,25)
+mainTab.Text = "Main"
+mainTab.BackgroundColor3 = Color3.fromRGB(20,20,20)
+mainTab.TextColor3 = Color3.new(1,1,1)
+
+local bindTab = Instance.new("TextButton", frame)
+bindTab.Size = UDim2.new(0.5,0,0,25)
+bindTab.Position = UDim2.new(0.5,0,0,0)
+bindTab.Text = "Bind"
+bindTab.BackgroundColor3 = Color3.fromRGB(10,10,10)
+bindTab.TextColor3 = Color3.new(1,1,1)
+
+-- FRAMES
+local mainFrame = Instance.new("Frame", frame)
+mainFrame.Size = UDim2.new(1,0,1,-25)
+mainFrame.Position = UDim2.new(0,0,0,25)
+mainFrame.BackgroundTransparency = 1
+
+local bindFrame = Instance.new("Frame", frame)
+bindFrame.Size = UDim2.new(1,0,1,-25)
+bindFrame.Position = UDim2.new(0,0,0,25)
+bindFrame.BackgroundTransparency = 1
+bindFrame.Visible = false
+
+mainTab.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    bindFrame.Visible = false
+end)
+
+bindTab.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    bindFrame.Visible = true
+end)
+
+-- 🌈 LURSH TITLE
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1,0,0,25)
+title.Text = "LURSH"
+title.BackgroundTransparency = 1
+title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(255,255,255)
+
+task.spawn(function()
+    local h = 0
+    while true do
+        h = (h + 0.01) % 1
+        title.TextColor3 = Color3.fromHSV(h,1,1)
+        RunService.RenderStepped:Wait()
+    end
+end)
 
 -- INPUTS
-local speedBox = Instance.new("TextBox", frame)
+local speedBox = Instance.new("TextBox", mainFrame)
 speedBox.Position = UDim2.new(0,10,0,35)
 speedBox.Size = UDim2.new(0,90,0,20)
 speedBox.PlaceholderText = "SPEED"
 speedBox.TextColor3 = Color3.new(1,1,1)
 speedBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
-local jumpBox = Instance.new("TextBox", frame)
+local jumpBox = Instance.new("TextBox", mainFrame)
 jumpBox.Position = UDim2.new(0,120,0,35)
 jumpBox.Size = UDim2.new(0,90,0,20)
 jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
+-- BUTTON
 local function btn(text,y)
-    local b = Instance.new("TextButton", frame)
+    local b = Instance.new("TextButton", mainFrame)
     b.Size = UDim2.new(0,180,0,22)
     b.Position = UDim2.new(0.5,-90,0,y)
     b.Text = text
@@ -88,7 +134,47 @@ local noclipBtn = btn("Noclip: OFF",155)
 local infBtn = btn("Infinity Jump: OFF",185)
 local closeBtn = btn("Close GUI",215)
 
--- APPLY
+-- STATES
+local flying = false
+local noclip = false
+local infJump = false
+local flySpeed = 60
+local currentSpeed = 16
+local bv
+
+-- SLIDER (FLY SPEED)
+local bar = Instance.new("Frame", mainFrame)
+bar.Size = UDim2.new(0,180,0,8)
+bar.Position = UDim2.new(0.5,-90,0,245)
+bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
+
+local fill = Instance.new("Frame", bar)
+fill.Size = UDim2.new(0.5,0,1,0)
+fill.BackgroundColor3 = Color3.fromRGB(0,60,150)
+
+local dragging = false
+
+bar.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+
+bar.InputEnded:Connect(function()
+    dragging = false
+end)
+
+UIS.InputChanged:Connect(function(i)
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local x = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
+        fill.Size = UDim2.new(x,0,1,0)
+
+        flySpeed = math.floor(20 + x * 200)
+        flySpeed = math.clamp(flySpeed, 20, 220)
+    end
+end)
+
+-- APPLY / RESET
 apply.MouseButton1Click:Connect(function()
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
@@ -105,7 +191,7 @@ reset.MouseButton1Click:Connect(function()
     end
 end)
 
--- FLY TOGGLE (FIXED CORE)
+-- FLY TOGGLE
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
@@ -139,32 +225,37 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- MAIN LOOP (CLEAN FIXED ENGINE)
+-- INPUTS (KEYBINDS)
+UIS.InputBegan:Connect(function(input, gp)
+    if gp then return end
+
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        screen.Enabled = not screen.Enabled
+    end
+end)
+
+-- MAIN LOOP
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
-    -- SPEED (NO CONFLICT)
     if hum then
         hum.WalkSpeed = flying and 0 or currentSpeed
     end
 
-    -- INF JUMP
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 
-    -- NOCLIP FIX (stable toggle system)
-    if char then
+    if noclip and char then
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
-                v.CanCollide = not noclip
+                v.CanCollide = false
             end
         end
     end
 
-    -- FLY ENGINE (ONLY CONTROL SOURCE)
     if flying and root and bv then
         local cam = workspace.CurrentCamera
         local move = Vector3.zero
