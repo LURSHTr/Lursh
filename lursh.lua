@@ -36,7 +36,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- 🌈 RAINBOW AURORA TITLE
+-- 🌈  AURORA TITLE
 local auroraTitle = Instance.new("TextLabel", frame)
 auroraTitle.Size = UDim2.new(1,0,0,30)
 auroraTitle.Text = "AURORA"
@@ -103,14 +103,14 @@ lursh.TextColor3 = Color3.new(1,1,1)
 lursh.BackgroundTransparency = 1
 
 -- INPUTS (SPEED/JUMP)
-local speedBox = Instance.new("TextBox", mainFrame)
+local speedBox = Instance.new("Speed", mainFrame)
 speedBox.Position = UDim2.new(0,10,0,25)
 speedBox.Size = UDim2.new(0,90,0,20)
 speedBox.PlaceholderText = "SPEED"
 speedBox.TextColor3 = Color3.new(1,1,1)
 speedBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
-local jumpBox = Instance.new("TextBox", mainFrame)
+local jumpBox = Instance.new("Jump", mainFrame)
 jumpBox.Position = UDim2.new(0,120,0,25)
 jumpBox.Size = UDim2.new(0,90,0,20)
 jumpBox.PlaceholderText = "JUMP"
@@ -129,7 +129,7 @@ local function btn(text, y)
     return b
 end
 
-local apply = btn("Apply", 50)
+local apply = btn("Uygula", 50)
 local reset = btn("Reset", 75)
 local flyBtn = btn("Fly: OFF", 100)
 local noclipBtn = btn("Noclip: OFF", 125)
