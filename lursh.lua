@@ -55,12 +55,14 @@ mainTab.Size = UDim2.new(0.5,0,0,25)
 mainTab.Position = UDim2.new(0,0,0,0)
 mainTab.Text = "Main"
 mainTab.BackgroundColor3 = Color3.fromRGB(20,20,20)
+mainTab.TextColor3 = Color3.new(1,1,1)
 
 local bindTab = Instance.new("TextButton", frame)
 bindTab.Size = UDim2.new(0.5,0,0,25)
 bindTab.Position = UDim2.new(0.5,0,0,0)
 bindTab.Text = "Bind"
 bindTab.BackgroundColor3 = Color3.fromRGB(10,10,10)
+bindTab.TextColor3 = Color3.new(1,1,1)
 
 -- FRAMES
 local mainFrame = Instance.new("Frame", frame)
@@ -234,7 +236,7 @@ local function createBind(name, y)
     button.Position = UDim2.new(1,-90,0,y)
     button.Text = binds[name].Name
     button.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    button.TextColor3 = Color3.new(1,1,1) -- ✅ BEYAZ YAZI
+    button.TextColor3 = Color3.new(1,1,1)
     button.TextScaled = true
 
     button.MouseButton1Click:Connect(function()
@@ -249,11 +251,27 @@ local flyBindBtn = createBind("Fly", 10)
 local noclipBindBtn = createBind("Noclip", 45)
 local infBindBtn = createBind("InfJump", 80)
 
+-- 🌈 BUMBLE RAINBOW
+local bumble = Instance.new("TextLabel", bindFrame)
+bumble.Size = UDim2.new(1,0,0,25)
+bumble.Position = UDim2.new(0,0,1,-30)
+bumble.Text = "Bumble"
+bumble.BackgroundTransparency = 1
+bumble.TextScaled = true
+
+task.spawn(function()
+    local h = 0
+    while true do
+        h = (h + 0.01) % 1
+        bumble.TextColor3 = Color3.fromHSV(h,1,1)
+        RunService.RenderStepped:Wait()
+    end
+end)
+
 -- INPUT SYSTEM
 UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
 
-    -- bind set
     if waitingForBind then
         binds[waitingForBind] = input.KeyCode
 
@@ -269,7 +287,6 @@ UIS.InputBegan:Connect(function(input, gp)
         return
     end
 
-    -- bind usage
     if input.KeyCode == binds.Fly then
         flying = not flying
         flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
@@ -285,7 +302,6 @@ UIS.InputBegan:Connect(function(input, gp)
         infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
     end
 
-    -- ✅ SOL CTRL GUI TOGGLE
     if input.KeyCode == Enum.KeyCode.LeftControl then
         screen.Enabled = not screen.Enabled
     end
