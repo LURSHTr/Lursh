@@ -62,7 +62,6 @@ bindTab.Text = "Bind"
 bindTab.BackgroundColor3 = Color3.fromRGB(10,10,10)
 bindTab.TextColor3 = Color3.new(1,1,1)
 
--- FRAMES
 local mainFrame = Instance.new("Frame", frame)
 mainFrame.Size = UDim2.new(1,0,1,-25)
 mainFrame.Position = UDim2.new(0,0,0,25)
@@ -90,7 +89,6 @@ title.Size = UDim2.new(1,0,0,25)
 title.Text = "LURSH"
 title.BackgroundTransparency = 1
 title.TextScaled = true
-title.TextColor3 = Color3.fromRGB(255,255,255)
 
 task.spawn(function()
     local h = 0
@@ -116,7 +114,7 @@ jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- BUTTON
+-- BUTTONS
 local function btn(text,y)
     local b = Instance.new("TextButton", mainFrame)
     b.Size = UDim2.new(0,180,0,22)
@@ -142,7 +140,7 @@ local flySpeed = 60
 local currentSpeed = 16
 local bv
 
--- SLIDER (FLY SPEED)
+-- SLIDER
 local bar = Instance.new("Frame", mainFrame)
 bar.Size = UDim2.new(0,180,0,8)
 bar.Position = UDim2.new(0.5,-90,0,245)
@@ -169,12 +167,12 @@ UIS.InputChanged:Connect(function(i)
         local x = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
         fill.Size = UDim2.new(x,0,1,0)
 
-        flySpeed = math.floor(20 + x * 200)
-        flySpeed = math.clamp(flySpeed, 20, 220)
+        flySpeed = math.floor(40 + x * 400)
+        flySpeed = math.clamp(flySpeed, 40, 300)
     end
 end)
 
--- APPLY / RESET
+-- BUTTON ACTIONS
 apply.MouseButton1Click:Connect(function()
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
@@ -191,7 +189,7 @@ reset.MouseButton1Click:Connect(function()
     end
 end)
 
--- FLY TOGGLE
+-- FLY
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
@@ -225,16 +223,7 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- INPUTS (KEYBINDS)
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
-
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        screen.Enabled = not screen.Enabled
-    end
-end)
-
--- MAIN LOOP
+-- LOOP
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
