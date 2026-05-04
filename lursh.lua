@@ -14,8 +14,7 @@ frame.Position = UDim2.new(0.5,-110,0,10)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 
 -- DRAG
-local draggingUI = false
-local dragInput, dragStart, startPos
+local draggingUI, dragInput, dragStart, startPos
 
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -49,76 +48,31 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- TABS
-local mainTab = Instance.new("TextButton", frame)
-mainTab.Size = UDim2.new(0.5,0,0,25)
-mainTab.Text = "Main"
-mainTab.BackgroundColor3 = Color3.fromRGB(20,20,20)
-mainTab.TextColor3 = Color3.new(1,1,1)
-
-local bindTab = Instance.new("TextButton", frame)
-bindTab.Size = UDim2.new(0.5,0,0,25)
-bindTab.Position = UDim2.new(0.5,0,0,0)
-bindTab.Text = "Bind"
-bindTab.BackgroundColor3 = Color3.fromRGB(10,10,10)
-bindTab.TextColor3 = Color3.new(1,1,1)
-
--- FRAMES
-local mainFrame = Instance.new("Frame", frame)
-mainFrame.Size = UDim2.new(1,0,1,-25)
-mainFrame.Position = UDim2.new(0,0,0,25)
-mainFrame.BackgroundTransparency = 1
-
-local bindFrame = Instance.new("Frame", frame)
-bindFrame.Size = UDim2.new(1,0,1,-25)
-bindFrame.Position = UDim2.new(0,0,0,25)
-bindFrame.BackgroundTransparency = 1
-bindFrame.Visible = false
-
-mainTab.MouseButton1Click:Connect(function()
-    mainFrame.Visible = true
-    bindFrame.Visible = false
-end)
-
-bindTab.MouseButton1Click:Connect(function()
-    mainFrame.Visible = false
-    bindFrame.Visible = true
-end)
-
--- TITLE
-local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1,0,0,25)
-title.Text = "LURSH"
-title.BackgroundTransparency = 1
-title.TextScaled = true
-
-task.spawn(function()
-    local h = 0
-    while true do
-        h = (h + 0.01) % 1
-        title.TextColor3 = Color3.fromHSV(h,1,1)
-        RunService.RenderStepped:Wait()
-    end
-end)
+-- STATES
+local flying = false
+local noclip = false
+local infJump = false
+local flySpeed = 60
+local currentSpeed = 16
+local bv
 
 -- INPUTS
-local speedBox = Instance.new("TextBox", mainFrame)
+local speedBox = Instance.new("TextBox", frame)
 speedBox.Position = UDim2.new(0,10,0,35)
 speedBox.Size = UDim2.new(0,90,0,20)
 speedBox.PlaceholderText = "SPEED"
 speedBox.TextColor3 = Color3.new(1,1,1)
 speedBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
-local jumpBox = Instance.new("TextBox", mainFrame)
+local jumpBox = Instance.new("TextBox", frame)
 jumpBox.Position = UDim2.new(0,120,0,35)
 jumpBox.Size = UDim2.new(0,90,0,20)
 jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- BUTTON
 local function btn(text,y)
-    local b = Instance.new("TextButton", mainFrame)
+    local b = Instance.new("TextButton", frame)
     b.Size = UDim2.new(0,180,0,22)
     b.Position = UDim2.new(0.5,-90,0,y)
     b.Text = text
@@ -134,64 +88,24 @@ local noclipBtn = btn("Noclip: OFF",155)
 local infBtn = btn("Infinity Jump: OFF",185)
 local closeBtn = btn("Close GUI",215)
 
--- STATES
-local flying = false
-local noclip = false
-local infJump = false
-local flySpeed = 50
-local currentSpeed = 16
-local bv
-
--- SLIDER
-local bar = Instance.new("Frame", mainFrame)
-bar.Size = UDim2.new(0,180,0,8)
-bar.Position = UDim2.new(0.5,-90,0,245)
-bar.BackgroundColor3 = Color3.fromRGB(40,40,40)
-
-local fill = Instance.new("Frame", bar)
-fill.Size = UDim2.new(0.5,0,1,0)
-fill.BackgroundColor3 = Color3.fromRGB(0,60,150)
-
-local dragging = false
-
-bar.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-    end
-end)
-
-bar.InputEnded:Connect(function()
-    dragging = false
-end)
-
-UIS.InputChanged:Connect(function(i)
-    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-        local x = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
-        fill.Size = UDim2.new(x,0,1,0)
-        flySpeed = math.floor(20 + x*200)
-    end
-end)
-
--- BUTTON ACTIONS
+-- APPLY
 apply.MouseButton1Click:Connect(function()
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
         currentSpeed = tonumber(speedBox.Text) or 16
-        hum.WalkSpeed = currentSpeed
         hum.JumpPower = tonumber(jumpBox.Text) or 50
     end
 end)
 
 reset.MouseButton1Click:Connect(function()
+    currentSpeed = 16
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
-        currentSpeed = 16
-        hum.WalkSpeed = 16
         hum.JumpPower = 50
     end
 end)
 
--- 💣 FLY SYSTEM (FIXED)
+-- FLY TOGGLE (FIXED CORE)
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
@@ -200,7 +114,7 @@ flyBtn.MouseButton1Click:Connect(function()
 
     if flying and root then
         bv = Instance.new("BodyVelocity")
-        bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+        bv.MaxForce = Vector3.new(1e7,1e7,1e7)
         bv.Velocity = Vector3.zero
         bv.Parent = root
     else
@@ -225,28 +139,32 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- LOOP
+-- MAIN LOOP (CLEAN FIXED ENGINE)
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
+    -- SPEED (NO CONFLICT)
     if hum then
         hum.WalkSpeed = flying and 0 or currentSpeed
     end
 
+    -- INF JUMP
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 
-    if noclip and char then
+    -- NOCLIP FIX (stable toggle system)
+    if char then
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
-                v.CanCollide = false
+                v.CanCollide = not noclip
             end
         end
     end
 
+    -- FLY ENGINE (ONLY CONTROL SOURCE)
     if flying and root and bv then
         local cam = workspace.CurrentCamera
         local move = Vector3.zero
