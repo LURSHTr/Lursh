@@ -52,7 +52,6 @@ end)
 -- TABS
 local mainTab = Instance.new("TextButton", frame)
 mainTab.Size = UDim2.new(0.5,0,0,25)
-mainTab.Position = UDim2.new(0,0,0,0)
 mainTab.Text = "Main"
 mainTab.BackgroundColor3 = Color3.fromRGB(20,20,20)
 mainTab.TextColor3 = Color3.new(1,1,1)
@@ -76,7 +75,6 @@ bindFrame.Position = UDim2.new(0,0,0,25)
 bindFrame.BackgroundTransparency = 1
 bindFrame.Visible = false
 
--- TAB SWITCH
 mainTab.MouseButton1Click:Connect(function()
     mainFrame.Visible = true
     bindFrame.Visible = false
@@ -118,7 +116,7 @@ jumpBox.PlaceholderText = "JUMP"
 jumpBox.TextColor3 = Color3.new(1,1,1)
 jumpBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 
--- BUTTON FUNCTION
+-- BUTTON
 local function btn(text,y)
     local b = Instance.new("TextButton", mainFrame)
     b.Size = UDim2.new(0,180,0,22)
@@ -142,15 +140,7 @@ local noclip = false
 local infJump = false
 local flySpeed = 50
 local currentSpeed = 16
-
--- BINDS
-local binds = {
-    Fly = Enum.KeyCode.F,
-    Noclip = Enum.KeyCode.N,
-    InfJump = Enum.KeyCode.J
-}
-
-local waitingForBind = nil
+local bv
 
 -- SLIDER
 local bar = Instance.new("Frame", mainFrame)
@@ -178,14 +168,13 @@ UIS.InputChanged:Connect(function(i)
     if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
         local x = math.clamp((i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,0,1)
         fill.Size = UDim2.new(x,0,1,0)
-        flySpeed = math.floor(20 + x*180)
+        flySpeed = math.floor(20 + x*200)
     end
 end)
 
 -- BUTTON ACTIONS
 apply.MouseButton1Click:Connect(function()
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
         currentSpeed = tonumber(speedBox.Text) or 16
         hum.WalkSpeed = currentSpeed
@@ -194,8 +183,7 @@ apply.MouseButton1Click:Connect(function()
 end)
 
 reset.MouseButton1Click:Connect(function()
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
         currentSpeed = 16
         hum.WalkSpeed = 16
@@ -203,9 +191,24 @@ reset.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 💣 FLY SYSTEM (FIXED)
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+
+    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+    if flying and root then
+        bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+        bv.Velocity = Vector3.zero
+        bv.Parent = root
+    else
+        if bv then
+            bv:Destroy()
+            bv = nil
+        end
+    end
 end)
 
 noclipBtn.MouseButton1Click:Connect(function()
@@ -222,49 +225,20 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- INPUT SYSTEM
-UIS.InputBegan:Connect(function(input, gp)
-    if gp then return end
-
-    if input.KeyCode == binds.Fly then
-        flying = not flying
-        flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
-    end
-
-    if input.KeyCode == binds.Noclip then
-        noclip = not noclip
-        noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF"
-    end
-
-    if input.KeyCode == binds.InfJump then
-        infJump = not infJump
-        infBtn.Text = infJump and "Infinity Jump: ON" or "Infinity Jump: OFF"
-    end
-
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        screen.Enabled = not screen.Enabled
-    end
-end)
-
--- SYSTEM LOOP
+-- LOOP
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
-    -- SPEED FIX
-    if hum and not flying then
-        hum.WalkSpeed = currentSpeed
-    elseif hum and flying then
-        hum.WalkSpeed = 0
+    if hum then
+        hum.WalkSpeed = flying and 0 or currentSpeed
     end
 
-    -- INF JUMP
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 
-    -- NOCLIP
     if noclip and char then
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -273,8 +247,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- FLY FIXED
-    if flying and root then
+    if flying and root and bv then
         local cam = workspace.CurrentCamera
         local move = Vector3.zero
 
@@ -286,13 +259,9 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
 
         if move.Magnitude > 0 then
-            root.AssemblyLinearVelocity = move.Unit * flySpeed
+            bv.Velocity = move.Unit * flySpeed
         else
-            root.AssemblyLinearVelocity = Vector3.zero
-        end
-    else
-        if root then
-            root.AssemblyLinearVelocity = Vector3.zero
+            bv.Velocity = Vector3.zero
         end
     end
 end)
