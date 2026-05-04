@@ -39,7 +39,7 @@ end)
 -- 🌈 RAINBOW AURORA TITLE
 local auroraTitle = Instance.new("TextLabel", frame)
 auroraTitle.Size = UDim2.new(1,0,0,30)
-auroraTitle.Text = "Rainbow Aurora"
+auroraTitle.Text = "AURORA"
 auroraTitle.BackgroundTransparency = 1
 auroraTitle.TextScaled = true
 auroraTitle.Font = Enum.Font.GothamBold
@@ -98,7 +98,7 @@ end)
 -- LURSH LOGO
 local lursh = Instance.new("TextLabel", mainFrame)
 lursh.Size = UDim2.new(1,0,0,20)
-lursh.Text = "LURSH"
+lursh.Text = "Owner VexR4"
 lursh.TextColor3 = Color3.new(1,1,1)
 lursh.BackgroundTransparency = 1
 
