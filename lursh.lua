@@ -222,70 +222,9 @@ closeBtn.MouseButton1Click:Connect(function()
     screen:Destroy()
 end)
 
--- BIND UI
-local function createBind(name, y)
-    local label = Instance.new("TextLabel", bindFrame)
-    label.Size = UDim2.new(0,100,0,25)
-    label.Position = UDim2.new(0,10,0,y)
-    label.Text = name
-    label.BackgroundTransparency = 1
-    label.TextColor3 = Color3.new(1,1,1)
-
-    local button = Instance.new("TextButton", bindFrame)
-    button.Size = UDim2.new(0,80,0,25)
-    button.Position = UDim2.new(1,-90,0,y)
-    button.Text = binds[name].Name
-    button.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    button.TextColor3 = Color3.new(1,1,1)
-    button.TextScaled = true
-
-    button.MouseButton1Click:Connect(function()
-        button.Text = "..."
-        waitingForBind = name
-    end)
-
-    return button
-end
-
-local flyBindBtn = createBind("Fly", 10)
-local noclipBindBtn = createBind("Noclip", 45)
-local infBindBtn = createBind("InfJump", 80)
-
--- 🌈 BUMBLE RAINBOW
-local bumble = Instance.new("TextLabel", bindFrame)
-bumble.Size = UDim2.new(1,0,0,25)
-bumble.Position = UDim2.new(0,0,1,-30)
-bumble.Text = "Bumble"
-bumble.BackgroundTransparency = 1
-bumble.TextScaled = true
-
-task.spawn(function()
-    local h = 0
-    while true do
-        h = (h + 0.01) % 1
-        bumble.TextColor3 = Color3.fromHSV(h,1,1)
-        RunService.RenderStepped:Wait()
-    end
-end)
-
 -- INPUT SYSTEM
 UIS.InputBegan:Connect(function(input, gp)
     if gp then return end
-
-    if waitingForBind then
-        binds[waitingForBind] = input.KeyCode
-
-        if waitingForBind == "Fly" then
-            flyBindBtn.Text = input.KeyCode.Name
-        elseif waitingForBind == "Noclip" then
-            noclipBindBtn.Text = input.KeyCode.Name
-        elseif waitingForBind == "InfJump" then
-            infBindBtn.Text = input.KeyCode.Name
-        end
-
-        waitingForBind = nil
-        return
-    end
 
     if input.KeyCode == binds.Fly then
         flying = not flying
@@ -313,14 +252,19 @@ RunService.RenderStepped:Connect(function()
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local root = char and char:FindFirstChild("HumanoidRootPart")
 
-    if hum then
+    -- SPEED FIX
+    if hum and not flying then
         hum.WalkSpeed = currentSpeed
+    elseif hum and flying then
+        hum.WalkSpeed = 0
     end
 
+    -- INF JUMP
     if infJump and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
         hum:ChangeState(Enum.HumanoidStateType.Jumping)
     end
 
+    -- NOCLIP
     if noclip and char then
         for _,v in pairs(char:GetDescendants()) do
             if v:IsA("BasePart") then
@@ -329,6 +273,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- FLY FIXED
     if flying and root then
         local cam = workspace.CurrentCamera
         local move = Vector3.zero
@@ -341,7 +286,13 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= Vector3.new(0,1,0) end
 
         if move.Magnitude > 0 then
-            root.Velocity = move.Unit * flySpeed
+            root.AssemblyLinearVelocity = move.Unit * flySpeed
+        else
+            root.AssemblyLinearVelocity = Vector3.zero
+        end
+    else
+        if root then
+            root.AssemblyLinearVelocity = Vector3.zero
         end
     end
 end)
