@@ -54,7 +54,7 @@ title.TextColor3 = iceBlue
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
--- Sürükleme Mantığı
+-- Sürükleme
 local dragging, dragStart, startPos
 connections.DragStart = topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
 connections.DragChange = UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
@@ -67,8 +67,9 @@ local tabFrame = Instance.new("Frame", mainFrame)
 tabFrame.Size = UDim2.new(1, -20, 0, 35)
 tabFrame.Position = UDim2.new(0, 10, 0, 50)
 tabFrame.BackgroundTransparency = 1
-Instance.new("UIListLayout", tabFrame).FillDirection = Enum.FillDirection.Horizontal
-tabFrame.UIListLayout.Padding = UDim.new(0, 5)
+local tabLayout = Instance.new("UIListLayout", tabFrame)
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 5)
 
 local pages = {}
 local function createPage(name)
@@ -152,7 +153,7 @@ local function createBtn(text, y, parent, callback)
 end
 
 ------------------------------------------------
--- FUNCTIONS (TP & SAVE)
+-- LOGICS (TP & TRACER HELPERS)
 ------------------------------------------------
 local function savePosFunc()
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -170,61 +171,35 @@ local function tpPosFunc()
     return false
 end
 
+local function getTracer(p)
+    if tracerLines[p.Name] then return tracerLines[p.Name] end
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.Thickness = 1.5
+    line.Transparency = 1
+    tracerLines[p.Name] = line
+    return line
+end
+
 ------------------------------------------------
--- MAIN PAGE CONTENT (RE-ADDED MISSING KEYS)
+-- PAGE CONTENTS
 ------------------------------------------------
+-- Main Page
 createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
 createSlider(mainPage, "Jump Power", 45, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
 createSlider(mainPage, "Fly Speed", 80, 500, 50, function(v) settings.flySpeed = v end)
-
 local flyBtn = createBtn("Fly: OFF", 120, mainPage, function() states.flying = not states.flying end)
 local noclipBtn = createBtn("Noclip: OFF", 165, mainPage, function() states.noclip = not states.noclip end)
 local infBtn = createBtn("InfJump: OFF", 210, mainPage, function() states.infJump = not states.infJump end)
-
 createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
     for _, conn in pairs(connections) do if conn then conn:Disconnect() end end
     for _, line in pairs(tracerLines) do line:Remove() end
     screen:Destroy()
 end)
 
-------------------------------------------------
--- TP PAGE
-------------------------------------------------
-local statusLabel = Instance.new("TextLabel", tpPage)
-statusLabel.Size = UDim2.new(0, 300, 0, 30)
-statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "No Position Saved"
-statusLabel.TextColor3 = Color3.new(1,1,1)
-statusLabel.Font = Enum.Font.GothamBold
-statusLabel.TextSize = 13
-
-createBtn("SAVE CURRENT POS", 50, tpPage, function()
-    if savePosFunc() then
-        statusLabel.Text = "Saved: " .. math.floor(savedPosition.X) .. ", " .. math.floor(savedPosition.Y) .. ", " .. math.floor(savedPosition.Z)
-        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
-    end
-end)
-
-createBtn("TELEPORT TO SAVED", 95, tpPage, function()
-    if not tpPosFunc() then
-        statusLabel.Text = "Error: No Waypoint!"
-        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-    end
-end)
-
-createBtn("DELETE WAYPOINT", 140, tpPage, function()
-    savedPosition = nil
-    statusLabel.Text = "Position Deleted"
-    statusLabel.TextColor3 = Color3.fromRGB(255, 255, 50)
-end)
-
-------------------------------------------------
--- VISUALS PAGE
-------------------------------------------------
+-- Visuals Page
 local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
 local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
-
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 45)
 colorGrid.Position = UDim2.new(0.5, -150, 0, 125)
@@ -232,7 +207,6 @@ colorGrid.BackgroundTransparency = 1
 Instance.new("UIListLayout", colorGrid).FillDirection = Enum.FillDirection.Horizontal
 colorGrid.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 colorGrid.UIListLayout.Padding = UDim.new(0, 8)
-
 local palette = {Color3.fromRGB(175, 238, 238), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
 for _, color in pairs(palette) do
     local cBtn = Instance.new("TextButton", colorGrid)
@@ -243,34 +217,24 @@ for _, color in pairs(palette) do
     cBtn.MouseButton1Click:Connect(function() currentESPColor = color end)
 end
 
-------------------------------------------------
--- BIND PAGE
-------------------------------------------------
+-- TP Page
+local statusLabel = Instance.new("TextLabel", tpPage)
+statusLabel.Size = UDim2.new(0, 300, 0, 30) statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
+statusLabel.BackgroundTransparency = 1 statusLabel.Text = "No Position Saved" statusLabel.TextColor3 = Color3.new(1,1,1) statusLabel.Font = Enum.Font.GothamBold
+createBtn("SAVE CURRENT POS", 50, tpPage, function() if savePosFunc() then statusLabel.Text = "Saved Waypoint!" statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50) end end)
+createBtn("TELEPORT TO SAVED", 95, tpPage, function() if not tpPosFunc() then statusLabel.Text = "Error: No Waypoint!" statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50) end end)
+createBtn("DELETE WAYPOINT", 140, tpPage, function() savedPosition = nil statusLabel.Text = "Position Deleted" statusLabel.TextColor3 = Color3.fromRGB(255, 255, 50) end)
+
+-- Bind Page
 local function createBind(text, y, keyName)
     local label = Instance.new("TextLabel", bindPage)
-    label.Size = UDim2.new(0, 150, 0, 30)
-    label.Position = UDim2.new(0, 40, 0, y)
-    label.Text = text
-    label.TextColor3 = Color3.new(1,1,1)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 11
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
+    label.Size = UDim2.new(0, 150, 0, 30) label.Position = UDim2.new(0, 40, 0, y)
+    label.Text = text label.TextColor3 = Color3.new(1,1,1) label.Font = Enum.Font.GothamBold label.TextSize = 11 label.TextXAlignment = Enum.TextXAlignment.Left
     local bBox = Instance.new("TextButton", bindPage)
-    bBox.Size = UDim2.new(0, 100, 0, 30)
-    bBox.Position = UDim2.new(0, 200, 0, y)
-    bBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    bBox.Text = binds[keyName].Name
-    bBox.TextColor3 = iceBlue
-    bBox.TextSize = 11
-    Instance.new("UICorner", bBox)
-
-    bBox.MouseButton1Click:Connect(function()
-        bindingTarget = keyName
-        bBox.Text = "..."
-    end)
+    bBox.Size = UDim2.new(0, 100, 0, 30) bBox.Position = UDim2.new(0, 200, 0, y)
+    bBox.BackgroundColor3 = Color3.fromRGB(30,30,30) bBox.Text = binds[keyName].Name bBox.TextColor3 = iceBlue bBox.TextSize = 11 Instance.new("UICorner", bBox)
+    bBox.MouseButton1Click:Connect(function() bindingTarget = keyName bBox.Text = "..." end)
 end
-
 createBind("Fly Toggle", 10, "flying")
 createBind("Noclip Toggle", 45, "noclip")
 createBind("InfJump Toggle", 80, "infJump")
@@ -278,11 +242,10 @@ createBind("Save Waypoint", 115, "savePos")
 createBind("TP to Waypoint", 150, "tpPos")
 
 ------------------------------------------------
--- LOGICS & LOOPS
+-- MAIN LOOP (FLY, ESP, TRACERS)
 ------------------------------------------------
 local bv, bg
 connections.MainLoop = RunService.RenderStepped:Connect(function()
-    -- Buton yazılarını güncelle
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
     noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
     infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
@@ -294,8 +257,7 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         if not bv then
             bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
             bg = Instance.new("BodyGyro", char.HumanoidRootPart)
-            bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
-            bv.MaxForce = Vector3.new(9e9,9e9,9e9)
+            bg.MaxTorque = Vector3.new(9e9,9e9,9e9) bv.MaxForce = Vector3.new(9e9,9e9,9e9)
             char.Humanoid.PlatformStand = true
         end
         local cam = workspace.CurrentCamera
@@ -318,18 +280,49 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         for _,v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
 
-    -- ESP (Sadece basitleştirilmiş hali)
-    for _,p in pairs(Players:GetPlayers()) do
+    -- Visuals Logic (ESP & TRACERS)
+    for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            -- ESP Highlight
             local h = p.Character:FindFirstChild("LurshESP")
             if states.espEnabled then
                 if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
                 h.FillColor = currentESPColor
             elseif h then h:Destroy() end
+
+            -- Tracers
+            local line = getTracer(p)
+            if states.tracersEnabled then
+                local hrpPos = p.Character.HumanoidRootPart.Position
+                local vector, onScreen = camera:WorldToViewportPoint(hrpPos)
+                if onScreen then
+                    line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                    line.To = Vector2.new(vector.X, vector.Y)
+                    line.Color = currentESPColor
+                    line.Visible = true
+                else
+                    line.Visible = false
+                end
+            else
+                line.Visible = false
+            end
+        else
+            if tracerLines[p.Name] then tracerLines[p.Name].Visible = false end
         end
     end
 end)
 
+-- Temizlik (Oyuncu çıkınca çizgi silme)
+Players.PlayerRemoving:Connect(function(p)
+    if tracerLines[p.Name] then
+        tracerLines[p.Name]:Remove()
+        tracerLines[p.Name] = nil
+    end
+end)
+
+------------------------------------------------
+-- INPUTS
+------------------------------------------------
 connections.Input = UIS.InputBegan:Connect(function(input, gpe)
     if bindingTarget then
         if input.UserInputType == Enum.UserInputType.Keyboard then
