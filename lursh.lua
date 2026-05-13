@@ -46,7 +46,7 @@ end
 -- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "LurshPremiumV3_FullVersion"
+screen.Name = "LurshPremiumV3_FullFix_v2"
 screen.Parent = gui
 screen.ResetOnSpawn = false
 
@@ -121,7 +121,7 @@ local tpPage = createPage("TP")
 mainPage.Visible = true
 
 ------------------------------------------------
--- COMPONENTS
+-- UI COMPONENTS
 ------------------------------------------------
 local function createSlider(parent, text, y, max, default, callback)
     local frame = Instance.new("Frame", parent)
@@ -176,7 +176,6 @@ local flyBtn = createBtn("Fly: OFF", 120, mainPage, function() states.flying = n
 local noclipBtn = createBtn("Noclip: OFF", 160, mainPage, function() states.noclip = not states.noclip end)
 local infBtn = createBtn("InfJump: OFF", 200, mainPage, function() states.infJump = not states.infJump end)
 
--- CLOSE GUI (GERİ EKLENDİ)
 createBtn("CLOSE GUI (UNLOAD)", 340, mainPage, function() 
     for _, c in pairs(connections) do if c then c:Disconnect() end end
     for _, l in pairs(tracerLines) do l:Remove() end
@@ -223,7 +222,6 @@ statusLabel.Font = Enum.Font.GothamBold statusLabel.TextSize = 11
 
 createBtn("SAVE CURRENT POS", 50, tpPage, function() if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then savedPosition = player.Character.HumanoidRootPart.CFrame statusLabel.Text = "Saved Waypoint!" statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50) end end)
 createBtn("TELEPORT TO SAVED", 95, tpPage, function() if savedPosition and player.Character then player.Character.HumanoidRootPart.CFrame = savedPosition end end)
--- DELETE WAYPOINT (GERİ EKLENDİ)
 createBtn("DELETE WAYPOINT", 140, tpPage, function() savedPosition = nil statusLabel.Text = "Position Deleted" statusLabel.TextColor3 = Color3.fromRGB(255, 255, 50) end)
 
 -- BIND PAGE
@@ -241,7 +239,7 @@ createBindRow("Fly", 10, "flying"); createBindRow("Noclip", 40, "noclip"); creat
 createBindRow("Save Pos", 100, "savePos"); createBindRow("TP to Pos", 130, "tpPos"); createBindRow("Aimbot Key", 160, "aimKey")
 
 ------------------------------------------------
--- LOGICS
+-- LOGICS (FIXED NOCLIP)
 ------------------------------------------------
 local function getClosest()
     local target, shortestDist = nil, settings.aimFOV
@@ -257,6 +255,17 @@ local function getClosest()
     end
     return target
 end
+
+-- NOCLIP FIX (Fizik motoruna uyumlu Stepped kullanımı)
+connections.NoclipLoop = RunService.Stepped:Connect(function()
+    if states.noclip and player.Character then
+        for _, v in pairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
 
 connections.MainLoop = RunService.RenderStepped:Connect(function()
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
