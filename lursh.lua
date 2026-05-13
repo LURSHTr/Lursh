@@ -1,312 +1,284 @@
-
 local player = game.Players.LocalPlayer
 local gui = player:WaitForChild("PlayerGui")
-
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
--- STATES
-local flying = false
-local noclip = false
-local infJump = false
-local espEnabled = false
+-- Bağlantıları tutmak için tablo (Kapatınca hepsini durduracağız)
+local connections = {}
 
-local espColor = Color3.fromRGB(255,0,0)
-local espObjects = {}
+-- STATES & DEFAULTS
+local states = { flying = false, noclip = false, infJump = false }
+local binds = { flying = Enum.KeyCode.F, noclip = Enum.KeyCode.N, infJump = Enum.KeyCode.J }
+local settings = { walkSpeed = 16, jumpPower = 50, flySpeed = 50 }
+local espEnabled = false
+local iceBlue = Color3.fromRGB(175, 238, 238)
+local bindingTarget = nil
 
 ------------------------------------------------
--- GUI
+-- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "LurshGui"
+screen.Name = "LurshPremiumV3_Final"
 screen.Parent = gui
 screen.ResetOnSpawn = false
-screen.IgnoreGuiInset = true
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Parent = screen
-mainFrame.Size = UDim2.new(0, 340, 0, 390)
-mainFrame.Position = UDim2.new(0.5, -170, 0.5, -195)
-mainFrame.BackgroundColor3 = Color3.fromRGB(10,10,10)
-mainFrame.BorderSizePixel = 0
+mainFrame.Size = UDim2.new(0, 380, 0, 480)
+mainFrame.Position = UDim2.new(0.5, -190, 0.5, -240)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12,12,12)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,12)
 
-------------------------------------------------
--- TOPBAR
-------------------------------------------------
+-- Topbar
 local topBar = Instance.new("Frame")
 topBar.Parent = mainFrame
-topBar.Size = UDim2.new(1,0,0,35)
-topBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
-
+topBar.Size = UDim2.new(1,0,0,40)
+topBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Instance.new("UICorner", topBar).CornerRadius = UDim.new(0,12)
 
 local title = Instance.new("TextLabel")
 title.Parent = topBar
 title.Size = UDim2.new(1,0,1,0)
 title.BackgroundTransparency = 1
-title.Text = "LURSH"
+title.Text = "LURSH PREMIUM V3"
+title.TextColor3 = iceBlue
 title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-title.TextColor3 = Color3.fromRGB(255,0,0)
+title.TextSize = 18
 
-------------------------------------------------
--- DRAG
-------------------------------------------------
+-- Sürükleme
 local dragging, dragStart, startPos
-
-topBar.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		dragStart = i.Position
-		startPos = mainFrame.Position
-	end
-end)
-
-UIS.InputChanged:Connect(function(i)
-	if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
-		local d = i.Position - dragStart
-		mainFrame.Position = UDim2.new(
-			startPos.X.Scale,
-			startPos.X.Offset + d.X,
-			startPos.Y.Scale,
-			startPos.Y.Offset + d.Y
-		)
-	end
-end)
-
-UIS.InputEnded:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = false
-	end
-end)
+connections.DragStart = topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
+connections.DragChange = UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
+connections.DragEnd = UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 
 ------------------------------------------------
--- TABS
+-- NAVIGATION & PAGES
 ------------------------------------------------
-local tabFrame = Instance.new("Frame")
-tabFrame.Parent = mainFrame
-tabFrame.Size = UDim2.new(1,-20,0,35)
-tabFrame.Position = UDim2.new(0,10,0,45)
+local tabFrame = Instance.new("Frame", mainFrame)
+tabFrame.Size = UDim2.new(1, -20, 0, 35)
+tabFrame.Position = UDim2.new(0, 10, 0, 50)
 tabFrame.BackgroundTransparency = 1
+Instance.new("UIListLayout", tabFrame).FillDirection = Enum.FillDirection.Horizontal
+tabFrame.UIListLayout.Padding = UDim.new(0, 10)
 
-local layout = Instance.new("UIListLayout")
-layout.Parent = tabFrame
-layout.FillDirection = Enum.FillDirection.Horizontal
-layout.Padding = UDim.new(0,8)
-
-local function tab(name)
-	local b = Instance.new("TextButton")
-	b.Parent = tabFrame
-	b.Size = UDim2.new(0,95,1,0)
-	b.Text = name
-	b.BackgroundColor3 = Color3.fromRGB(30,30,30)
-	b.TextColor3 = Color3.new(1,1,1)
-	b.Font = Enum.Font.GothamBold
-	b.TextScaled = true
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-	return b
+local pages = {}
+local function createPage(name)
+    local p = Instance.new("Frame", mainFrame)
+    p.Size = UDim2.new(1, 0, 1, -100)
+    p.Position = UDim2.new(0, 0, 0, 95)
+    p.BackgroundTransparency = 1
+    p.Visible = false
+    pages[name] = p
+    
+    local b = Instance.new("TextButton", tabFrame)
+    b.Size = UDim2.new(0, 110, 1, 0)
+    b.Text = name
+    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 14
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    b.MouseButton1Click:Connect(function()
+        for _,pg in pairs(pages) do pg.Visible = false end
+        p.Visible = true
+    end)
+    return p
 end
 
-local mainTab = tab("Main")
-local visualsTab = tab("Visuals")
-local bindTab = tab("Bind")
+local mainPage = createPage("Main")
+local visualsPage = createPage("Visuals")
+local bindPage = createPage("Bind")
+mainPage.Visible = true
 
 ------------------------------------------------
--- PAGES
+-- HELPERS
 ------------------------------------------------
-local function page()
-	local p = Instance.new("Frame")
-	p.Parent = mainFrame
-	p.Position = UDim2.new(0,0,0,90)
-	p.Size = UDim2.new(1,0,1,-95)
-	p.BackgroundTransparency = 1
-	return p
+local function createSlider(parent, text, y, max, default, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(0, 300, 0, 25)
+    frame.Position = UDim2.new(0.5, -150, 0, y)
+    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    Instance.new("UICorner", frame)
+
+    local inner = Instance.new("Frame", frame)
+    inner.Size = UDim2.new(default/max, 0, 1, 0)
+    inner.BackgroundColor3 = iceBlue
+    Instance.new("UICorner", inner)
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text..": "..math.floor(default)
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 12
+
+    local sDragging = false
+    frame.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = true end end)
+    UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = false end end)
+    UIS.InputChanged:Connect(function(i)
+        if sDragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local pos = math.clamp((i.Position.X - frame.AbsolutePosition.X) / frame.AbsoluteSize.X, 0, 1)
+            inner.Size = UDim2.new(pos, 0, 1, 0)
+            local val = math.floor(pos * max)
+            label.Text = text..": "..val
+            callback(val)
+        end
+    end)
 end
 
-local mainPage = page()
-local visualsPage = page()
-local bindPage = page()
-
-visualsPage.Visible = false
-bindPage.Visible = false
-
-local function switch(p)
-	mainPage.Visible = false
-	visualsPage.Visible = false
-	bindPage.Visible = false
-	p.Visible = true
-end
-
-mainTab.MouseButton1Click:Connect(function() switch(mainPage) end)
-visualsTab.MouseButton1Click:Connect(function() switch(visualsPage) end)
-bindTab.MouseButton1Click:Connect(function() switch(bindPage) end)
-
-------------------------------------------------
--- BUTTON
-------------------------------------------------
-local function btn(txt,y,parent)
-	local b = Instance.new("TextButton")
-	b.Parent = parent
-	b.Size = UDim2.new(0,260,0,35)
-	b.Position = UDim2.new(0.5,-130,0,y)
-	b.Text = txt
-	b.BackgroundColor3 = Color3.fromRGB(170,0,0)
-	b.TextColor3 = Color3.new(1,1,1)
-	b.Font = Enum.Font.GothamBold
-	b.TextScaled = true
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
-	return b
-end
-
-------------------------------------------------
--- SPEED + JUMP
-------------------------------------------------
-local speedBox = Instance.new("TextBox")
-speedBox.Parent = mainPage
-speedBox.Size = UDim2.new(0,125,0,35)
-speedBox.Position = UDim2.new(0.5,-130,0,10)
-speedBox.PlaceholderText = "Speed"
-speedBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
-speedBox.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", speedBox).CornerRadius = UDim.new(0,10)
-
-local jumpBox = Instance.new("TextBox")
-jumpBox.Parent = mainPage
-jumpBox.Size = UDim2.new(0,125,0,35)
-jumpBox.Position = UDim2.new(0.5,5,0,10)
-jumpBox.PlaceholderText = "Jump"
-jumpBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
-jumpBox.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", jumpBox).CornerRadius = UDim.new(0,10)
-
-local applyBtn = btn("Apply",60,mainPage)
-local flyBtn = btn("Fly OFF",105,mainPage)
-local noclipBtn = btn("Noclip OFF",150,mainPage)
-local infBtn = btn("InfJump OFF",195,mainPage)
-local closeBtn = btn("Close GUI",240,mainPage)
-
-------------------------------------------------
--- APPLY
-------------------------------------------------
-applyBtn.MouseButton1Click:Connect(function()
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.WalkSpeed = tonumber(speedBox.Text) or 16
-		hum.JumpPower = tonumber(jumpBox.Text) or 50
-	end
-end)
-
-------------------------------------------------
--- TOGGLES
-------------------------------------------------
-flyBtn.MouseButton1Click:Connect(function()
-	flying = not flying
-	flyBtn.Text = flying and "Fly ON" or "Fly OFF"
-end)
-
-noclipBtn.MouseButton1Click:Connect(function()
-	noclip = not noclip
-	noclipBtn.Text = noclip and "Noclip ON" or "Noclip OFF"
-end)
-
-infBtn.MouseButton1Click:Connect(function()
-	infJump = not infJump
-	infBtn.Text = infJump and "InfJump ON" or "InfJump OFF"
-end)
-
-closeBtn.MouseButton1Click:Connect(function()
-	screen.Enabled = false
-end)
-
-------------------------------------------------
--- VISUALS
-------------------------------------------------
-local espBtn = btn("ESP OFF",10,visualsPage)
-
-espBtn.MouseButton1Click:Connect(function()
-	espEnabled = not espEnabled
-	espBtn.Text = espEnabled and "ESP ON" or "ESP OFF"
-end)
-
-------------------------------------------------
--- COLOR PALETTE
-------------------------------------------------
-local colors = {
-	Color3.fromRGB(255,0,0),
-	Color3.fromRGB(0,255,0),
-	Color3.fromRGB(0,0,255),
-	Color3.fromRGB(255,255,0),
-	Color3.fromRGB(255,255,255),
-	Color3.fromRGB(255,0,255),
-	Color3.fromRGB(0,255,255),
-}
-
-local paletteFrame = Instance.new("Frame")
-paletteFrame.Parent = visualsPage
-paletteFrame.Size = UDim2.new(0,260,0,40)
-paletteFrame.Position = UDim2.new(0.5,-130,0,55)
-paletteFrame.BackgroundTransparency = 1
-
-local pl = Instance.new("UIListLayout")
-pl.Parent = paletteFrame
-pl.FillDirection = Enum.FillDirection.Horizontal
-pl.Padding = UDim.new(0,5)
-
-for _,c in ipairs(colors) do
-	local b = Instance.new("TextButton")
-	b.Parent = paletteFrame
-	b.Size = UDim2.new(0,25,0,25)
-	b.BackgroundColor3 = c
-	b.Text = ""
-	Instance.new("UICorner", b).CornerRadius = UDim.new(1,0)
-
-	b.MouseButton1Click:Connect(function()
-		espColor = c
-	end)
+local function createBtn(text, y, parent, callback)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(0, 300, 0, 35)
+    b.Position = UDim2.new(0.5, -150, 0, y)
+    b.BackgroundColor3 = iceBlue
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(10, 10, 10)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 13
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+    b.MouseButton1Click:Connect(callback)
+    return b
 end
 
 ------------------------------------------------
--- ESP LOOP (FIXED & STABLE)
+-- MAIN CONTENT
 ------------------------------------------------
-RunService.RenderStepped:Connect(function()
-	for _,plr in pairs(Players:GetPlayers()) do
-		if plr ~= player then
-			local char = plr.Character
-			local root = char and char:FindFirstChild("HumanoidRootPart")
+createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
+createSlider(mainPage, "Jump Power", 45, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
+createSlider(mainPage, "Fly Speed", 80, 500, 50, function(v) settings.flySpeed = v end)
 
-			if root then
-				local box = espObjects[plr]
+local flyBtn = createBtn("Fly: OFF", 120, mainPage, function() states.flying = not states.flying end)
+local noclipBtn = createBtn("Noclip: OFF", 165, mainPage, function() states.noclip = not states.noclip end)
+local infBtn = createBtn("InfJump: OFF", 210, mainPage, function() states.infJump = not states.infJump end)
 
-				if espEnabled then
-					if not box then
-						box = Instance.new("BoxHandleAdornment")
-						box.Parent = workspace
-						box.Adornee = root
-						box.Size = Vector3.new(4,5,1)
-						box.Transparency = 0.5
-						box.AlwaysOnTop = true
-						espObjects[plr] = box
-					end
-					box.Color3 = espColor
-				else
-					if box then
-						box:Destroy()
-						espObjects[plr] = nil
-					end
-				end
-			end
-		end
-	end
+-- KESİN ÇÖZÜM: TÜM SCRIPT'İ YOK EDEN BUTON
+createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
+    -- 1. Tüm döngüleri ve bağlantıları durdur
+    for _, conn in pairs(connections) do
+        if conn then conn:Disconnect() end
+    end
+    -- 2. Aktif hileleri kapat
+    states.flying = false
+    states.noclip = false
+    states.infJump = false
+    espEnabled = false
+    -- 3. GUI'yi tamamen sil
+    screen:Destroy()
 end)
 
 ------------------------------------------------
--- INF JUMP
+-- BIND PAGE
 ------------------------------------------------
-UIS.JumpRequest:Connect(function()
-	if infJump then
-		local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-		if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-	end
+local function createBind(text, y, keyName)
+    local label = Instance.new("TextLabel", bindPage)
+    label.Size = UDim2.new(0, 150, 0, 35)
+    label.Position = UDim2.new(0, 40, 0, y)
+    label.Text = text
+    label.TextColor3 = Color3.new(1,1,1)
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bBox = Instance.new("TextButton", bindPage)
+    bBox.Size = UDim2.new(0, 100, 0, 35)
+    bBox.Position = UDim2.new(0, 200, 0, y)
+    bBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    bBox.Text = binds[keyName].Name
+    bBox.TextColor3 = iceBlue
+    bBox.TextSize = 13
+    Instance.new("UICorner", bBox)
+
+    bBox.MouseButton1Click:Connect(function()
+        bindingTarget = keyName
+        bBox.Text = "..."
+    end)
+end
+
+createBind("Fly Toggle", 10, "flying")
+createBind("Noclip Toggle", 55, "noclip")
+createBind("InfJump Toggle", 100, "infJump")
+
+------------------------------------------------
+-- LOGICS (Döngüler Bağlantılara Atandı)
+------------------------------------------------
+local bv, bg
+connections.MainLoop = RunService.RenderStepped:Connect(function()
+    flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
+    noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
+    infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
+
+    local char = player.Character
+    if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
+        if not bv then
+            bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
+            bg = Instance.new("BodyGyro", char.HumanoidRootPart)
+            bg.MaxTorque = Vector3.new(9e9,9e9,9e9)
+            bv.MaxForce = Vector3.new(9e9,9e9,9e9)
+            char.Humanoid.PlatformStand = true
+        end
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.new(0,0,0)
+        if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0,1,0) end
+        bv.Velocity = dir * settings.flySpeed
+        bg.CFrame = cam.CFrame
+    else
+        if bv then bv:Destroy() bv = nil end
+        if bg then bg:Destroy() bg = nil end
+        if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
+    end
+
+    if states.noclip and char then
+        for _,v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    end
+end)
+
+connections.Input = UIS.InputBegan:Connect(function(input, gpe)
+    if bindingTarget then
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            binds[bindingTarget] = input.KeyCode
+            for _, v in pairs(bindPage:GetChildren()) do
+                if v:IsA("TextButton") and v.Text == "..." then v.Text = input.KeyCode.Name end
+            end
+            bindingTarget = nil
+        end
+        return
+    end
+
+    if input.KeyCode == Enum.KeyCode.LeftControl then
+        screen.Enabled = not screen.Enabled
+    end
+
+    if not gpe then
+        if input.KeyCode == binds.flying then states.flying = not states.flying end
+        if input.KeyCode == binds.noclip then states.noclip = not states.noclip end
+        if input.KeyCode == binds.infJump then states.infJump = not states.infJump end
+    end
+end)
+
+connections.InfJump = UIS.JumpRequest:Connect(function()
+    if states.infJump and player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- Visuals
+local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() espEnabled = not espEnabled end)
+connections.ESP = RunService.RenderStepped:Connect(function()
+    espBtn.Text = "ESP: "..(espEnabled and "ON" or "OFF")
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            local h = p.Character:FindFirstChild("LurshESP")
+            if espEnabled then
+                if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
+                h.FillColor = iceBlue
+            elseif h then h:Destroy() end
+        end
+    end
 end)
