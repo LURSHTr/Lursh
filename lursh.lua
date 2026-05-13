@@ -4,7 +4,7 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
--- Bağlantıları tutmak için tablo (Kapatınca hepsini durduracağız)
+-- Bağlantıları tutmak için tablo
 local connections = {}
 
 -- STATES & DEFAULTS
@@ -12,6 +12,7 @@ local states = { flying = false, noclip = false, infJump = false }
 local binds = { flying = Enum.KeyCode.F, noclip = Enum.KeyCode.N, infJump = Enum.KeyCode.J }
 local settings = { walkSpeed = 16, jumpPower = 50, flySpeed = 50 }
 local espEnabled = false
+local currentESPColor = Color3.fromRGB(175, 238, 238) -- Varsayılan Buz Mavisi
 local iceBlue = Color3.fromRGB(175, 238, 238)
 local bindingTarget = nil
 
@@ -46,7 +47,7 @@ title.TextColor3 = iceBlue
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
--- Sürükleme
+-- Sürükleme Mantığı
 local dragging, dragStart, startPos
 connections.DragStart = topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
 connections.DragChange = UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
@@ -143,7 +144,7 @@ local function createBtn(text, y, parent, callback)
 end
 
 ------------------------------------------------
--- MAIN CONTENT
+-- MAIN PAGE CONTENT
 ------------------------------------------------
 createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
 createSlider(mainPage, "Jump Power", 45, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
@@ -153,20 +154,54 @@ local flyBtn = createBtn("Fly: OFF", 120, mainPage, function() states.flying = n
 local noclipBtn = createBtn("Noclip: OFF", 165, mainPage, function() states.noclip = not states.noclip end)
 local infBtn = createBtn("InfJump: OFF", 210, mainPage, function() states.infJump = not states.infJump end)
 
--- KESİN ÇÖZÜM: TÜM SCRIPT'İ YOK EDEN BUTON
 createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
-    -- 1. Tüm döngüleri ve bağlantıları durdur
-    for _, conn in pairs(connections) do
-        if conn then conn:Disconnect() end
-    end
-    -- 2. Aktif hileleri kapat
-    states.flying = false
-    states.noclip = false
-    states.infJump = false
-    espEnabled = false
-    -- 3. GUI'yi tamamen sil
+    for _, conn in pairs(connections) do if conn then conn:Disconnect() end end
+    states.flying = false states.noclip = false states.infJump = false espEnabled = false
     screen:Destroy()
 end)
+
+------------------------------------------------
+-- VISUALS PAGE (ESP + COLOR PALETTE)
+------------------------------------------------
+local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() espEnabled = not espEnabled end)
+
+local colorLabel = Instance.new("TextLabel", visualsPage)
+colorLabel.Size = UDim2.new(0, 300, 0, 20)
+colorLabel.Position = UDim2.new(0.5, -150, 0, 55)
+colorLabel.BackgroundTransparency = 1
+colorLabel.Text = "ESP COLOR PALETTE"
+colorLabel.TextColor3 = Color3.new(1,1,1)
+colorLabel.Font = Enum.Font.GothamBold
+colorLabel.TextSize = 12
+
+local colorGrid = Instance.new("Frame", visualsPage)
+colorGrid.Size = UDim2.new(0, 300, 0, 45)
+colorGrid.Position = UDim2.new(0.5, -150, 0, 80)
+colorGrid.BackgroundTransparency = 1
+local layout = Instance.new("UIListLayout", colorGrid)
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.Padding = UDim.new(0, 8)
+
+local palette = {
+    Color3.fromRGB(175, 238, 238), -- Ice Blue
+    Color3.fromRGB(255, 50, 50),   -- Red
+    Color3.fromRGB(50, 255, 50),   -- Green
+    Color3.fromRGB(255, 255, 50),  -- Yellow
+    Color3.fromRGB(255, 50, 255),  -- Pink/Purple
+    Color3.fromRGB(255, 255, 255)  -- White
+}
+
+for _, color in pairs(palette) do
+    local cBtn = Instance.new("TextButton", colorGrid)
+    cBtn.Size = UDim2.new(0, 35, 0, 35)
+    cBtn.BackgroundColor3 = color
+    cBtn.Text = ""
+    Instance.new("UICorner", cBtn).CornerRadius = UDim.new(0, 6)
+    cBtn.MouseButton1Click:Connect(function()
+        currentESPColor = color
+    end)
+end
 
 ------------------------------------------------
 -- BIND PAGE
@@ -201,15 +236,17 @@ createBind("Noclip Toggle", 55, "noclip")
 createBind("InfJump Toggle", 100, "infJump")
 
 ------------------------------------------------
--- LOGICS (Döngüler Bağlantılara Atandı)
+-- LOGICS & LOOPS
 ------------------------------------------------
 local bv, bg
 connections.MainLoop = RunService.RenderStepped:Connect(function()
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
     noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
     infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
+    espBtn.Text = "ESP: "..(espEnabled and "ON" or "OFF")
 
     local char = player.Character
+    -- Fly Logic
     if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
         if not bv then
             bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
@@ -234,8 +271,22 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
     end
 
+    -- Noclip Logic
     if states.noclip and char then
         for _,v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    end
+
+    -- ESP Logic
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            local h = p.Character:FindFirstChild("LurshESP")
+            if espEnabled then
+                if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
+                h.FillColor = currentESPColor
+            elseif h then
+                h:Destroy()
+            end
+        end
     end
 end)
 
@@ -250,11 +301,7 @@ connections.Input = UIS.InputBegan:Connect(function(input, gpe)
         end
         return
     end
-
-    if input.KeyCode == Enum.KeyCode.LeftControl then
-        screen.Enabled = not screen.Enabled
-    end
-
+    if input.KeyCode == Enum.KeyCode.LeftControl then screen.Enabled = not screen.Enabled end
     if not gpe then
         if input.KeyCode == binds.flying then states.flying = not states.flying end
         if input.KeyCode == binds.noclip then states.noclip = not states.noclip end
@@ -265,20 +312,5 @@ end)
 connections.InfJump = UIS.JumpRequest:Connect(function()
     if states.infJump and player.Character and player.Character:FindFirstChild("Humanoid") then
         player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- Visuals
-local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() espEnabled = not espEnabled end)
-connections.ESP = RunService.RenderStepped:Connect(function()
-    espBtn.Text = "ESP: "..(espEnabled and "ON" or "OFF")
-    for _,p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character then
-            local h = p.Character:FindFirstChild("LurshESP")
-            if espEnabled then
-                if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
-                h.FillColor = iceBlue
-            elseif h then h:Destroy() end
-        end
     end
 end)
