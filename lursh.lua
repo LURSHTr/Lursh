@@ -46,7 +46,7 @@ end
 -- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "LurshPremiumV3_FullFix_v2"
+screen.Name = "LurshPremiumV3_CleanFix"
 screen.Parent = gui
 screen.ResetOnSpawn = false
 
@@ -239,7 +239,7 @@ createBindRow("Fly", 10, "flying"); createBindRow("Noclip", 40, "noclip"); creat
 createBindRow("Save Pos", 100, "savePos"); createBindRow("TP to Pos", 130, "tpPos"); createBindRow("Aimbot Key", 160, "aimKey")
 
 ------------------------------------------------
--- LOGICS (FIXED NOCLIP)
+-- LOGICS (CLEANUP ADDED)
 ------------------------------------------------
 local function getClosest()
     local target, shortestDist = nil, settings.aimFOV
@@ -256,13 +256,11 @@ local function getClosest()
     return target
 end
 
--- NOCLIP FIX (Fizik motoruna uyumlu Stepped kullanımı)
+-- NOCLIP LOOP
 connections.NoclipLoop = RunService.Stepped:Connect(function()
     if states.noclip and player.Character then
         for _, v in pairs(player.Character:GetDescendants()) do
-            if v:IsA("BasePart") and v.CanCollide then
-                v.CanCollide = false
-            end
+            if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end
         end
     end
 end)
@@ -281,7 +279,7 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
     FOVCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     FOVCircle.Color = currentESPColor
 
-    -- FLY LOGIC
+    -- FLY
     local char = player.Character
     if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
@@ -307,27 +305,42 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AIMBOT
+    -- AIMBOT LOGIC
     local isAiming = tostring(binds.aimKey):find("MouseButton") and UIS:IsMouseButtonPressed(binds.aimKey) or UIS:IsKeyDown(binds.aimKey)
     if states.aimbotEnabled and isAiming then
         local target = getClosest()
         if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.Head.Position), 1/settings.aimSmoothness) end
     end
 
-    -- VISUALS LOOP
+    -- VISUALS LOOP & CLEANUP (SİLEN KISIM BURASI)
+    for name, line in pairs(tracerLines) do
+        local p = Players:FindFirstChild(name)
+        if not p or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+            line:Remove()
+            tracerLines[name] = nil
+        end
+    end
+    for name, tag in pairs(nameTags) do
+        local p = Players:FindFirstChild(name)
+        if not p or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+            tag:Remove()
+            nameTags[name] = nil
+        end
+    end
+
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = p.Character.HumanoidRootPart
             local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
             
-            -- Highlight
+            -- ESP Highlight
             local h = p.Character:FindFirstChild("LurshH")
             if states.espEnabled then
                 if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshH" end
                 h.FillColor = currentESPColor
             elseif h then h:Destroy() end
 
-            -- Tracer
+            -- Tracer Drawing
             if not tracerLines[p.Name] then tracerLines[p.Name] = createDrawing("Line", {Thickness = 1.5, Visible = false}) end
             local line = tracerLines[p.Name]
             if states.tracersEnabled and onScreen then
@@ -337,7 +350,7 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
                 line.Visible = true
             else line.Visible = false end
 
-            -- Nametag
+            -- Nametag Drawing
             if not nameTags[p.Name] then nameTags[p.Name] = createDrawing("Text", {Size = 14, Center = true, Outline = true, Visible = false}) end
             local tag = nameTags[p.Name]
             if states.namesEnabled and onScreen then
