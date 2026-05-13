@@ -29,8 +29,7 @@ local settings = {
     walkSpeed = 16, jumpPower = 50, flySpeed = 50, 
     aimSmoothness = 1, aimFOV = 150 
 }
-local currentESPColor = Color3.fromRGB(175, 238, 238)
-local iceBlue = Color3.fromRGB(175, 238, 238)
+local currentESPColor = Color3.fromRGB(0, 255, 255)
 local bindingTarget = nil
 
 ------------------------------------------------
@@ -46,7 +45,7 @@ end
 -- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "LurshPremiumV3_CleanFix"
+screen.Name = "KingPremiumV3_UltraFix"
 screen.Parent = gui
 screen.ResetOnSpawn = false
 
@@ -54,23 +53,28 @@ local mainFrame = Instance.new("Frame")
 mainFrame.Parent = screen
 mainFrame.Size = UDim2.new(0, 380, 0, 500)
 mainFrame.Position = UDim2.new(0.5, -190, 0.5, -250)
-mainFrame.BackgroundColor3 = Color3.fromRGB(12,12,12)
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,12)
+mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
+
+local frameStroke = Instance.new("UIStroke", mainFrame)
+frameStroke.Color = currentESPColor
+frameStroke.Thickness = 2
+frameStroke.Transparency = 0.5
 
 local topBar = Instance.new("Frame")
 topBar.Parent = mainFrame
-topBar.Size = UDim2.new(1,0,0,40)
-topBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
-Instance.new("UICorner", topBar).CornerRadius = UDim.new(0,12)
+topBar.Size = UDim2.new(1, 0, 0, 45)
+topBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0, 15)
 
 local title = Instance.new("TextLabel")
 title.Parent = topBar
-title.Size = UDim2.new(1,0,1,0)
+title.Size = UDim2.new(1, 0, 1, 0)
 title.BackgroundTransparency = 1
-title.Text = "LURSH PREMIUM V3"
-title.TextColor3 = iceBlue
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
+title.Text = "KING PREMIUM V3"
+title.TextColor3 = currentESPColor
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 20
 
 -- Sürükleme Mantığı
 local dragging, dragStart, startPos
@@ -83,31 +87,31 @@ UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.Mous
 ------------------------------------------------
 local tabFrame = Instance.new("Frame", mainFrame)
 tabFrame.Size = UDim2.new(1, -20, 0, 35)
-tabFrame.Position = UDim2.new(0, 10, 0, 50)
+tabFrame.Position = UDim2.new(0, 10, 0, 55)
 tabFrame.BackgroundTransparency = 1
 local tabLayout = Instance.new("UIListLayout", tabFrame)
 tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 4)
+tabLayout.Padding = UDim.new(0, 6)
 
 local pages = {}
 local function createPage(name)
     local p = Instance.new("Frame", mainFrame)
     p.Size = UDim2.new(1, 0, 1, -110)
-    p.Position = UDim2.new(0, 0, 0, 95)
+    p.Position = UDim2.new(0, 0, 0, 100)
     p.BackgroundTransparency = 1
     p.Visible = false
     pages[name] = p
     
     local b = Instance.new("TextButton", tabFrame)
-    b.Size = UDim2.new(0, 68, 1, 0)
+    b.Size = UDim2.new(0, 65, 1, 0)
     b.Text = name
-    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    b.TextColor3 = Color3.new(1,1,1)
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    b.TextColor3 = Color3.new(1, 1, 1)
     b.Font = Enum.Font.GothamBold
     b.TextSize = 10
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
     b.MouseButton1Click:Connect(function()
-        for _,pg in pairs(pages) do pg.Visible = false end
+        for _, pg in pairs(pages) do pg.Visible = false end
         p.Visible = true
     end)
     return p
@@ -121,17 +125,37 @@ local tpPage = createPage("TP")
 mainPage.Visible = true
 
 ------------------------------------------------
--- UI COMPONENTS
+-- COMPONENTS
 ------------------------------------------------
+local function createBtn(text, y, parent, callback)
+    local b = Instance.new("TextButton", parent)
+    b.Size = UDim2.new(0, 300, 0, 35)
+    b.Position = UDim2.new(0.5, -150, 0, y)
+    b.BackgroundColor3 = currentESPColor
+    b.Text = text
+    b.TextColor3 = Color3.fromRGB(0, 0, 0)
+    b.Font = Enum.Font.GothamBlack
+    b.TextSize = 12
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+    
+    local glow = Instance.new("UIStroke", b)
+    glow.Color = Color3.new(1,1,1)
+    glow.Thickness = 2
+    glow.Transparency = 0.6
+
+    b.MouseButton1Click:Connect(callback)
+    return b
+end
+
 local function createSlider(parent, text, y, max, default, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(0, 300, 0, 25)
+    frame.Size = UDim2.new(0, 300, 0, 30)
     frame.Position = UDim2.new(0.5, -150, 0, y)
-    frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     Instance.new("UICorner", frame)
     local inner = Instance.new("Frame", frame)
     inner.Size = UDim2.new(default/max, 0, 1, 0)
-    inner.BackgroundColor3 = iceBlue
+    inner.BackgroundColor3 = currentESPColor
     Instance.new("UICorner", inner)
     local label = Instance.new("TextLabel", frame)
     label.Size = UDim2.new(1, 0, 1, 0)
@@ -152,31 +176,18 @@ local function createSlider(parent, text, y, max, default, callback)
             callback(val)
         end
     end)
-end
-
-local function createBtn(text, y, parent, callback)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0, 300, 0, 32)
-    b.Position = UDim2.new(0.5, -150, 0, y)
-    b.BackgroundColor3 = iceBlue
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(10, 10, 10)
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 11
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
-    b.MouseButton1Click:Connect(callback)
-    return b
+    return inner
 end
 
 -- MAIN PAGE
-createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
-createSlider(mainPage, "Jump Power", 45, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
-createSlider(mainPage, "Fly Speed", 80, 500, 50, function(v) settings.flySpeed = v end)
-local flyBtn = createBtn("Fly: OFF", 120, mainPage, function() states.flying = not states.flying end)
-local noclipBtn = createBtn("Noclip: OFF", 160, mainPage, function() states.noclip = not states.noclip end)
-local infBtn = createBtn("InfJump: OFF", 200, mainPage, function() states.infJump = not states.infJump end)
+local wsSlider = createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
+local jpSlider = createSlider(mainPage, "Jump Power", 50, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
+local fsSlider = createSlider(mainPage, "Fly Speed", 90, 500, 50, function(v) settings.flySpeed = v end)
+local flyBtn = createBtn("Fly: OFF", 135, mainPage, function() states.flying = not states.flying end)
+local noclipBtn = createBtn("Noclip: OFF", 180, mainPage, function() states.noclip = not states.noclip end)
+local infBtn = createBtn("InfJump: OFF", 225, mainPage, function() states.infJump = not states.infJump end)
 
-createBtn("CLOSE GUI (UNLOAD)", 340, mainPage, function() 
+local closeBtn = createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
     for _, c in pairs(connections) do if c then c:Disconnect() end end
     for _, l in pairs(tracerLines) do l:Remove() end
     for _, n in pairs(nameTags) do n:Remove() end
@@ -184,47 +195,57 @@ createBtn("CLOSE GUI (UNLOAD)", 340, mainPage, function()
     screen:Destroy()
 end)
 
--- VISUALS PAGE
+-- VISUALS PAGE (PALET GERİ GELDİ)
 local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
-local tracerBtn = createBtn("Tracers: OFF", 50, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
-local nameBtn = createBtn("Names: OFF", 90, visualsPage, function() states.namesEnabled = not states.namesEnabled end)
+local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
+local nameBtn = createBtn("Names: OFF", 100, visualsPage, function() states.namesEnabled = not states.namesEnabled end)
 
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 40)
-colorGrid.Position = UDim2.new(0.5, -150, 0, 140)
+colorGrid.Position = UDim2.new(0.5, -150, 0, 150)
 colorGrid.BackgroundTransparency = 1
 Instance.new("UIListLayout", colorGrid).FillDirection = Enum.FillDirection.Horizontal
 colorGrid.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 colorGrid.UIListLayout.Padding = UDim.new(0, 8)
 
-local palette = {Color3.fromRGB(175, 238, 238), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
+local palette = {Color3.fromRGB(0, 255, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
 for _, color in pairs(palette) do
     local cBtn = Instance.new("TextButton", colorGrid)
     cBtn.Size = UDim2.new(0, 30, 0, 30)
     cBtn.BackgroundColor3 = color
     cBtn.Text = ""
     Instance.new("UICorner", cBtn)
-    cBtn.MouseButton1Click:Connect(function() currentESPColor = color title.TextColor3 = color end)
+    cBtn.MouseButton1Click:Connect(function() 
+        currentESPColor = color 
+        title.TextColor3 = color 
+        frameStroke.Color = color
+        flyBtn.BackgroundColor3 = color
+        noclipBtn.BackgroundColor3 = color
+        infBtn.BackgroundColor3 = color
+        wsSlider.BackgroundColor3 = color
+        jpSlider.BackgroundColor3 = color
+        fsSlider.BackgroundColor3 = color
+    end)
 end
 
 -- AIMBOT
 local aimBtn = createBtn("Aimbot: OFF", 10, aimPage, function() states.aimbotEnabled = not states.aimbotEnabled end)
-local teamCheckBtn = createBtn("Team Check: OFF", 50, aimPage, function() states.aimbotTeamCheck = not states.aimbotTeamCheck end)
-createSlider(aimPage, "Smoothness", 90, 10, 1, function(v) settings.aimSmoothness = math.max(1, v) end)
-createSlider(aimPage, "FOV Radius", 125, 600, 150, function(v) settings.aimFOV = v end)
+local teamBtn = createBtn("Team Check: OFF", 55, aimPage, function() states.aimbotTeamCheck = not states.aimbotTeamCheck end)
+createSlider(aimPage, "Smoothness", 105, 10, 1, function(v) settings.aimSmoothness = math.max(1, v) end)
+createSlider(aimPage, "FOV Radius", 145, 600, 150, function(v) settings.aimFOV = v end)
 local FOVCircle = createDrawing("Circle", {Thickness = 1, Transparency = 0.7, Color = currentESPColor, Visible = false})
 
--- TP PAGE
+-- TP PAGE (FIXED)
 local statusLabel = Instance.new("TextLabel", tpPage)
 statusLabel.Size = UDim2.new(0, 300, 0, 30) statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
 statusLabel.BackgroundTransparency = 1 statusLabel.Text = "No Position Saved" statusLabel.TextColor3 = Color3.new(1,1,1)
-statusLabel.Font = Enum.Font.GothamBold statusLabel.TextSize = 11
+statusLabel.Font = Enum.Font.GothamBold statusLabel.TextSize = 12
 
-createBtn("SAVE CURRENT POS", 50, tpPage, function() if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then savedPosition = player.Character.HumanoidRootPart.CFrame statusLabel.Text = "Saved Waypoint!" statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50) end end)
-createBtn("TELEPORT TO SAVED", 95, tpPage, function() if savedPosition and player.Character then player.Character.HumanoidRootPart.CFrame = savedPosition end end)
-createBtn("DELETE WAYPOINT", 140, tpPage, function() savedPosition = nil statusLabel.Text = "Position Deleted" statusLabel.TextColor3 = Color3.fromRGB(255, 255, 50) end)
+createBtn("SAVE CURRENT POS", 55, tpPage, function() if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then savedPosition = player.Character.HumanoidRootPart.CFrame statusLabel.Text = "KING SAVED POS!" statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0) end end)
+createBtn("TELEPORT TO SAVED", 105, tpPage, function() if savedPosition and player.Character then player.Character.HumanoidRootPart.CFrame = savedPosition end end)
+createBtn("DELETE WAYPOINT", 155, tpPage, function() savedPosition = nil statusLabel.Text = "Position Purged" statusLabel.TextColor3 = Color3.fromRGB(255, 100, 0) end)
 
--- BIND PAGE
+-- BIND PAGE (FIXED)
 local function createBindRow(text, y, keyName)
     local label = Instance.new("TextLabel", bindPage)
     label.Size = UDim2.new(0, 150, 0, 25) label.Position = UDim2.new(0, 40, 0, y)
@@ -232,14 +253,19 @@ local function createBindRow(text, y, keyName)
     local bBox = Instance.new("TextButton", bindPage)
     bBox.Size = UDim2.new(0, 100, 0, 25) bBox.Position = UDim2.new(0, 200, 0, y)
     bBox.BackgroundColor3 = Color3.fromRGB(30,30,30) bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
-    bBox.TextColor3 = iceBlue bBox.TextSize = 10 Instance.new("UICorner", bBox)
+    bBox.TextColor3 = currentESPColor bBox.TextSize = 10 Instance.new("UICorner", bBox)
     bBox.MouseButton1Click:Connect(function() bindingTarget = keyName bBox.Text = "..." end)
+    
+    RunService.RenderStepped:Connect(function()
+        bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
+        bBox.TextColor3 = currentESPColor
+    end)
 end
 createBindRow("Fly", 10, "flying"); createBindRow("Noclip", 40, "noclip"); createBindRow("InfJump", 70, "infJump")
 createBindRow("Save Pos", 100, "savePos"); createBindRow("TP to Pos", 130, "tpPos"); createBindRow("Aimbot Key", 160, "aimKey")
 
 ------------------------------------------------
--- LOGICS (CLEANUP ADDED)
+-- LOGICS (FIXED)
 ------------------------------------------------
 local function getClosest()
     local target, shortestDist = nil, settings.aimFOV
@@ -256,7 +282,6 @@ local function getClosest()
     return target
 end
 
--- NOCLIP LOOP
 connections.NoclipLoop = RunService.Stepped:Connect(function()
     if states.noclip and player.Character then
         for _, v in pairs(player.Character:GetDescendants()) do
@@ -273,6 +298,7 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
     espBtn.Text = "ESP: "..(states.espEnabled and "ON" or "OFF")
     tracerBtn.Text = "Tracers: "..(states.tracersEnabled and "ON" or "OFF")
     nameBtn.Text = "Names: "..(states.namesEnabled and "ON" or "OFF")
+    teamBtn.Text = "Team Check: "..(states.aimbotTeamCheck and "ON" or "OFF")
 
     FOVCircle.Visible = states.aimbotEnabled
     FOVCircle.Radius = settings.aimFOV
@@ -305,42 +331,28 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AIMBOT LOGIC
+    -- AIMBOT
     local isAiming = tostring(binds.aimKey):find("MouseButton") and UIS:IsMouseButtonPressed(binds.aimKey) or UIS:IsKeyDown(binds.aimKey)
     if states.aimbotEnabled and isAiming then
         local target = getClosest()
         if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.Head.Position), 1/settings.aimSmoothness) end
     end
 
-    -- VISUALS LOOP & CLEANUP (SİLEN KISIM BURASI)
-    for name, line in pairs(tracerLines) do
-        local p = Players:FindFirstChild(name)
-        if not p or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
-            line:Remove()
-            tracerLines[name] = nil
-        end
-    end
-    for name, tag in pairs(nameTags) do
-        local p = Players:FindFirstChild(name)
-        if not p or not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
-            tag:Remove()
-            nameTags[name] = nil
-        end
-    end
+    -- CLEANUP & DRAWING
+    for name, line in pairs(tracerLines) do if not Players:FindFirstChild(name) then line:Remove() tracerLines[name] = nil end end
+    for name, tag in pairs(nameTags) do if not Players:FindFirstChild(name) then tag:Remove() nameTags[name] = nil end end
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = p.Character.HumanoidRootPart
             local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
             
-            -- ESP Highlight
-            local h = p.Character:FindFirstChild("LurshH")
+            local h = p.Character:FindFirstChild("KingH")
             if states.espEnabled then
-                if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshH" end
+                if not h then h = Instance.new("Highlight", p.Character) h.Name = "KingH" end
                 h.FillColor = currentESPColor
             elseif h then h:Destroy() end
 
-            -- Tracer Drawing
             if not tracerLines[p.Name] then tracerLines[p.Name] = createDrawing("Line", {Thickness = 1.5, Visible = false}) end
             local line = tracerLines[p.Name]
             if states.tracersEnabled and onScreen then
@@ -350,7 +362,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
                 line.Visible = true
             else line.Visible = false end
 
-            -- Nametag Drawing
             if not nameTags[p.Name] then nameTags[p.Name] = createDrawing("Text", {Size = 14, Center = true, Outline = true, Visible = false}) end
             local tag = nameTags[p.Name]
             if states.namesEnabled and onScreen then
@@ -368,7 +379,6 @@ end)
 UIS.InputBegan:Connect(function(input, gpe)
     if bindingTarget then
         binds[bindingTarget] = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
-        for _,v in pairs(bindPage:GetChildren()) do if v:IsA("TextButton") and v.Text == "..." then v.Text = tostring(binds[bindingTarget]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "") end end
         bindingTarget = nil return
     end
     if input.KeyCode == Enum.KeyCode.LeftControl then screen.Enabled = not screen.Enabled end
