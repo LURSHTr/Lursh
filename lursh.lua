@@ -5,13 +5,20 @@ local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local camera = workspace.CurrentCamera
 
--- Bağlantıları tutmak için tablo
+-- Değişkenler
 local connections = {}
 local tracerLines = {}
+local savedPosition = nil 
 
 -- STATES & DEFAULTS
 local states = { flying = false, noclip = false, infJump = false, espEnabled = false, tracersEnabled = false }
-local binds = { flying = Enum.KeyCode.F, noclip = Enum.KeyCode.N, infJump = Enum.KeyCode.J }
+local binds = { 
+    flying = Enum.KeyCode.F, 
+    noclip = Enum.KeyCode.N, 
+    infJump = Enum.KeyCode.J,
+    savePos = Enum.KeyCode.K,
+    tpPos = Enum.KeyCode.L
+}
 local settings = { walkSpeed = 16, jumpPower = 50, flySpeed = 50 }
 local currentESPColor = Color3.fromRGB(175, 238, 238)
 local iceBlue = Color3.fromRGB(175, 238, 238)
@@ -47,21 +54,21 @@ title.TextColor3 = iceBlue
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
--- Sürükleme
+-- Sürükleme Mantığı
 local dragging, dragStart, startPos
 connections.DragStart = topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
 connections.DragChange = UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
 connections.DragEnd = UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
 
 ------------------------------------------------
--- NAVIGATION & PAGES
+-- NAVIGATION
 ------------------------------------------------
 local tabFrame = Instance.new("Frame", mainFrame)
 tabFrame.Size = UDim2.new(1, -20, 0, 35)
 tabFrame.Position = UDim2.new(0, 10, 0, 50)
 tabFrame.BackgroundTransparency = 1
 Instance.new("UIListLayout", tabFrame).FillDirection = Enum.FillDirection.Horizontal
-tabFrame.UIListLayout.Padding = UDim.new(0, 10)
+tabFrame.UIListLayout.Padding = UDim.new(0, 5)
 
 local pages = {}
 local function createPage(name)
@@ -73,12 +80,12 @@ local function createPage(name)
     pages[name] = p
     
     local b = Instance.new("TextButton", tabFrame)
-    b.Size = UDim2.new(0, 110, 1, 0)
+    b.Size = UDim2.new(0, 85, 1, 0)
     b.Text = name
     b.BackgroundColor3 = Color3.fromRGB(35,35,35)
     b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.GothamBold
-    b.TextSize = 14
+    b.TextSize = 12
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
     b.MouseButton1Click:Connect(function()
         for _,pg in pairs(pages) do pg.Visible = false end
@@ -90,6 +97,7 @@ end
 local mainPage = createPage("Main")
 local visualsPage = createPage("Visuals")
 local bindPage = createPage("Bind")
+local tpPage = createPage("TP")
 mainPage.Visible = true
 
 ------------------------------------------------
@@ -144,7 +152,26 @@ local function createBtn(text, y, parent, callback)
 end
 
 ------------------------------------------------
--- MAIN PAGE CONTENT
+-- FUNCTIONS (TP & SAVE)
+------------------------------------------------
+local function savePosFunc()
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        savedPosition = player.Character.HumanoidRootPart.CFrame
+        return true
+    end
+    return false
+end
+
+local function tpPosFunc()
+    if savedPosition and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        player.Character.HumanoidRootPart.CFrame = savedPosition
+        return true
+    end
+    return false
+end
+
+------------------------------------------------
+-- MAIN PAGE CONTENT (RE-ADDED MISSING KEYS)
 ------------------------------------------------
 createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
 createSlider(mainPage, "Jump Power", 45, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
@@ -157,8 +184,39 @@ local infBtn = createBtn("InfJump: OFF", 210, mainPage, function() states.infJum
 createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
     for _, conn in pairs(connections) do if conn then conn:Disconnect() end end
     for _, line in pairs(tracerLines) do line:Remove() end
-    states.flying = false states.noclip = false states.infJump = false states.espEnabled = false states.tracersEnabled = false
     screen:Destroy()
+end)
+
+------------------------------------------------
+-- TP PAGE
+------------------------------------------------
+local statusLabel = Instance.new("TextLabel", tpPage)
+statusLabel.Size = UDim2.new(0, 300, 0, 30)
+statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "No Position Saved"
+statusLabel.TextColor3 = Color3.new(1,1,1)
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 13
+
+createBtn("SAVE CURRENT POS", 50, tpPage, function()
+    if savePosFunc() then
+        statusLabel.Text = "Saved: " .. math.floor(savedPosition.X) .. ", " .. math.floor(savedPosition.Y) .. ", " .. math.floor(savedPosition.Z)
+        statusLabel.TextColor3 = Color3.fromRGB(50, 255, 50)
+    end
+end)
+
+createBtn("TELEPORT TO SAVED", 95, tpPage, function()
+    if not tpPosFunc() then
+        statusLabel.Text = "Error: No Waypoint!"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
+
+createBtn("DELETE WAYPOINT", 140, tpPage, function()
+    savedPosition = nil
+    statusLabel.Text = "Position Deleted"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 255, 50)
 end)
 
 ------------------------------------------------
@@ -167,42 +225,22 @@ end)
 local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
 local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
 
-local colorLabel = Instance.new("TextLabel", visualsPage)
-colorLabel.Size = UDim2.new(0, 300, 0, 20)
-colorLabel.Position = UDim2.new(0.5, -150, 0, 100)
-colorLabel.BackgroundTransparency = 1
-colorLabel.Text = "ESP & TRACER COLOR"
-colorLabel.TextColor3 = Color3.new(1,1,1)
-colorLabel.Font = Enum.Font.GothamBold
-colorLabel.TextSize = 12
-
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 45)
 colorGrid.Position = UDim2.new(0.5, -150, 0, 125)
 colorGrid.BackgroundTransparency = 1
-local layout = Instance.new("UIListLayout", colorGrid)
-layout.FillDirection = Enum.FillDirection.Horizontal
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.Padding = UDim.new(0, 8)
+Instance.new("UIListLayout", colorGrid).FillDirection = Enum.FillDirection.Horizontal
+colorGrid.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+colorGrid.UIListLayout.Padding = UDim.new(0, 8)
 
-local palette = {
-    Color3.fromRGB(175, 238, 238), -- Ice Blue
-    Color3.fromRGB(255, 50, 50),   -- Red
-    Color3.fromRGB(50, 255, 50),   -- Green
-    Color3.fromRGB(255, 255, 50),  -- Yellow
-    Color3.fromRGB(255, 50, 255),  -- Pink
-    Color3.fromRGB(255, 255, 255)  -- White
-}
-
+local palette = {Color3.fromRGB(175, 238, 238), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
 for _, color in pairs(palette) do
     local cBtn = Instance.new("TextButton", colorGrid)
     cBtn.Size = UDim2.new(0, 35, 0, 35)
     cBtn.BackgroundColor3 = color
     cBtn.Text = ""
-    Instance.new("UICorner", cBtn).CornerRadius = UDim.new(0, 6)
-    cBtn.MouseButton1Click:Connect(function()
-        currentESPColor = color
-    end)
+    Instance.new("UICorner", cBtn)
+    cBtn.MouseButton1Click:Connect(function() currentESPColor = color end)
 end
 
 ------------------------------------------------
@@ -210,21 +248,21 @@ end
 ------------------------------------------------
 local function createBind(text, y, keyName)
     local label = Instance.new("TextLabel", bindPage)
-    label.Size = UDim2.new(0, 150, 0, 35)
+    label.Size = UDim2.new(0, 150, 0, 30)
     label.Position = UDim2.new(0, 40, 0, y)
     label.Text = text
     label.TextColor3 = Color3.new(1,1,1)
     label.Font = Enum.Font.GothamBold
-    label.TextSize = 13
+    label.TextSize = 11
     label.TextXAlignment = Enum.TextXAlignment.Left
 
     local bBox = Instance.new("TextButton", bindPage)
-    bBox.Size = UDim2.new(0, 100, 0, 35)
+    bBox.Size = UDim2.new(0, 100, 0, 30)
     bBox.Position = UDim2.new(0, 200, 0, y)
     bBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
     bBox.Text = binds[keyName].Name
     bBox.TextColor3 = iceBlue
-    bBox.TextSize = 13
+    bBox.TextSize = 11
     Instance.new("UICorner", bBox)
 
     bBox.MouseButton1Click:Connect(function()
@@ -234,23 +272,17 @@ local function createBind(text, y, keyName)
 end
 
 createBind("Fly Toggle", 10, "flying")
-createBind("Noclip Toggle", 55, "noclip")
-createBind("InfJump Toggle", 100, "infJump")
+createBind("Noclip Toggle", 45, "noclip")
+createBind("InfJump Toggle", 80, "infJump")
+createBind("Save Waypoint", 115, "savePos")
+createBind("TP to Waypoint", 150, "tpPos")
 
 ------------------------------------------------
 -- LOGICS & LOOPS
 ------------------------------------------------
-local function createTracer(targetPlayer)
-    local line = Drawing.new("Line")
-    line.Thickness = 1
-    line.Transparency = 1
-    line.Color = currentESPColor
-    tracerLines[targetPlayer.Name] = line
-    return line
-end
-
 local bv, bg
 connections.MainLoop = RunService.RenderStepped:Connect(function()
+    -- Buton yazılarını güncelle
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
     noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
     infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
@@ -258,7 +290,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
     tracerBtn.Text = "Tracers: "..(states.tracersEnabled and "ON" or "OFF")
 
     local char = player.Character
-    -- Fly/Noclip Logic
     if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
         if not bv then
             bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
@@ -287,33 +318,14 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         for _,v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
 
-    -- Visuals (ESP & Tracers)
+    -- ESP (Sadece basitleştirilmiş hali)
     for _,p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            -- ESP Highlight
             local h = p.Character:FindFirstChild("LurshESP")
             if states.espEnabled then
                 if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
                 h.FillColor = currentESPColor
             elseif h then h:Destroy() end
-
-            -- Tracers
-            local line = tracerLines[p.Name] or createTracer(p)
-            if states.tracersEnabled then
-                local pos, onScreen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-                if onScreen then
-                    line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
-                    line.To = Vector2.new(pos.X, pos.Y)
-                    line.Color = currentESPColor
-                    line.Visible = true
-                else
-                    line.Visible = false
-                end
-            else
-                line.Visible = false
-            end
-        elseif tracerLines[p.Name] then
-            tracerLines[p.Name].Visible = false
         end
     end
 end)
@@ -334,6 +346,8 @@ connections.Input = UIS.InputBegan:Connect(function(input, gpe)
         if input.KeyCode == binds.flying then states.flying = not states.flying end
         if input.KeyCode == binds.noclip then states.noclip = not states.noclip end
         if input.KeyCode == binds.infJump then states.infJump = not states.infJump end
+        if input.KeyCode == binds.savePos then savePosFunc() end
+        if input.KeyCode == binds.tpPos then tpPosFunc() end
     end
 end)
 
