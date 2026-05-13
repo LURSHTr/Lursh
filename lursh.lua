@@ -45,14 +45,15 @@ end
 -- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "KingPremiumV3_UltraFix"
+screen.Name = "KingPremiumV3_PositionFix"
 screen.Parent = gui
 screen.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Parent = screen
 mainFrame.Size = UDim2.new(0, 380, 0, 500)
-mainFrame.Position = UDim2.new(0.5, -190, 0.5, -250)
+-- POZİSYON AYARI: Ekranın en solunda (0) ve dikeyde tam ortasında (0.5) başlar
+mainFrame.Position = UDim2.new(0, 10, 0.5, -250) 
 mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
 
@@ -125,7 +126,7 @@ local tpPage = createPage("TP")
 mainPage.Visible = true
 
 ------------------------------------------------
--- COMPONENTS
+-- COMPONENTS (MODERN NEON)
 ------------------------------------------------
 local function createBtn(text, y, parent, callback)
     local b = Instance.new("TextButton", parent)
@@ -179,7 +180,7 @@ local function createSlider(parent, text, y, max, default, callback)
     return inner
 end
 
--- MAIN PAGE
+-- PAGE CONTENT (MAIN, VISUALS, ETC.)
 local wsSlider = createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
 local jpSlider = createSlider(mainPage, "Jump Power", 50, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
 local fsSlider = createSlider(mainPage, "Fly Speed", 90, 500, 50, function(v) settings.flySpeed = v end)
@@ -187,19 +188,11 @@ local flyBtn = createBtn("Fly: OFF", 135, mainPage, function() states.flying = n
 local noclipBtn = createBtn("Noclip: OFF", 180, mainPage, function() states.noclip = not states.noclip end)
 local infBtn = createBtn("InfJump: OFF", 225, mainPage, function() states.infJump = not states.infJump end)
 
-local closeBtn = createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
-    for _, c in pairs(connections) do if c then c:Disconnect() end end
-    for _, l in pairs(tracerLines) do l:Remove() end
-    for _, n in pairs(nameTags) do n:Remove() end
-    if FOVCircle then FOVCircle:Remove() end
-    screen:Destroy()
-end)
-
--- VISUALS PAGE (PALET GERİ GELDİ)
 local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
 local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
 local nameBtn = createBtn("Names: OFF", 100, visualsPage, function() states.namesEnabled = not states.namesEnabled end)
 
+-- RENK PALETI
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 40)
 colorGrid.Position = UDim2.new(0.5, -150, 0, 150)
@@ -228,14 +221,7 @@ for _, color in pairs(palette) do
     end)
 end
 
--- AIMBOT
-local aimBtn = createBtn("Aimbot: OFF", 10, aimPage, function() states.aimbotEnabled = not states.aimbotEnabled end)
-local teamBtn = createBtn("Team Check: OFF", 55, aimPage, function() states.aimbotTeamCheck = not states.aimbotTeamCheck end)
-createSlider(aimPage, "Smoothness", 105, 10, 1, function(v) settings.aimSmoothness = math.max(1, v) end)
-createSlider(aimPage, "FOV Radius", 145, 600, 150, function(v) settings.aimFOV = v end)
-local FOVCircle = createDrawing("Circle", {Thickness = 1, Transparency = 0.7, Color = currentESPColor, Visible = false})
-
--- TP PAGE (FIXED)
+-- TP & BIND (FIXED)
 local statusLabel = Instance.new("TextLabel", tpPage)
 statusLabel.Size = UDim2.new(0, 300, 0, 30) statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
 statusLabel.BackgroundTransparency = 1 statusLabel.Text = "No Position Saved" statusLabel.TextColor3 = Color3.new(1,1,1)
@@ -245,7 +231,6 @@ createBtn("SAVE CURRENT POS", 55, tpPage, function() if player.Character and pla
 createBtn("TELEPORT TO SAVED", 105, tpPage, function() if savedPosition and player.Character then player.Character.HumanoidRootPart.CFrame = savedPosition end end)
 createBtn("DELETE WAYPOINT", 155, tpPage, function() savedPosition = nil statusLabel.Text = "Position Purged" statusLabel.TextColor3 = Color3.fromRGB(255, 100, 0) end)
 
--- BIND PAGE (FIXED)
 local function createBindRow(text, y, keyName)
     local label = Instance.new("TextLabel", bindPage)
     label.Size = UDim2.new(0, 150, 0, 25) label.Position = UDim2.new(0, 40, 0, y)
@@ -264,8 +249,15 @@ end
 createBindRow("Fly", 10, "flying"); createBindRow("Noclip", 40, "noclip"); createBindRow("InfJump", 70, "infJump")
 createBindRow("Save Pos", 100, "savePos"); createBindRow("TP to Pos", 130, "tpPos"); createBindRow("Aimbot Key", 160, "aimKey")
 
+-- AIMBOT
+local aimBtn = createBtn("Aimbot: OFF", 10, aimPage, function() states.aimbotEnabled = not states.aimbotEnabled end)
+local teamBtn = createBtn("Team Check: OFF", 55, aimPage, function() states.aimbotTeamCheck = not states.aimbotTeamCheck end)
+createSlider(aimPage, "Smoothness", 105, 10, 1, function(v) settings.aimSmoothness = math.max(1, v) end)
+createSlider(aimPage, "FOV Radius", 145, 600, 150, function(v) settings.aimFOV = v end)
+local FOVCircle = createDrawing("Circle", {Thickness = 1, Transparency = 0.7, Color = currentESPColor, Visible = false})
+
 ------------------------------------------------
--- LOGICS (FIXED)
+-- LOGICS (SAME FIXES)
 ------------------------------------------------
 local function getClosest()
     local target, shortestDist = nil, settings.aimFOV
@@ -305,7 +297,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
     FOVCircle.Position = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
     FOVCircle.Color = currentESPColor
 
-    -- FLY
     local char = player.Character
     if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
         local hrp = char.HumanoidRootPart
@@ -331,14 +322,12 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- AIMBOT
     local isAiming = tostring(binds.aimKey):find("MouseButton") and UIS:IsMouseButtonPressed(binds.aimKey) or UIS:IsKeyDown(binds.aimKey)
     if states.aimbotEnabled and isAiming then
         local target = getClosest()
         if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.Head.Position), 1/settings.aimSmoothness) end
     end
 
-    -- CLEANUP & DRAWING
     for name, line in pairs(tracerLines) do if not Players:FindFirstChild(name) then line:Remove() tracerLines[name] = nil end end
     for name, tag in pairs(nameTags) do if not Players:FindFirstChild(name) then tag:Remove() nameTags[name] = nil end end
 
@@ -346,13 +335,11 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = p.Character.HumanoidRootPart
             local pos, onScreen = camera:WorldToViewportPoint(hrp.Position)
-            
             local h = p.Character:FindFirstChild("KingH")
             if states.espEnabled then
                 if not h then h = Instance.new("Highlight", p.Character) h.Name = "KingH" end
                 h.FillColor = currentESPColor
             elseif h then h:Destroy() end
-
             if not tracerLines[p.Name] then tracerLines[p.Name] = createDrawing("Line", {Thickness = 1.5, Visible = false}) end
             local line = tracerLines[p.Name]
             if states.tracersEnabled and onScreen then
@@ -361,7 +348,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
                 line.Color = currentESPColor
                 line.Visible = true
             else line.Visible = false end
-
             if not nameTags[p.Name] then nameTags[p.Name] = createDrawing("Text", {Size = 14, Center = true, Outline = true, Visible = false}) end
             local tag = nameTags[p.Name]
             if states.namesEnabled and onScreen then
@@ -375,7 +361,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
     end
 end)
 
--- INPUTS
 UIS.InputBegan:Connect(function(input, gpe)
     if bindingTarget then
         binds[bindingTarget] = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
@@ -386,7 +371,7 @@ UIS.InputBegan:Connect(function(input, gpe)
         if input.KeyCode == binds.flying then states.flying = not states.flying end
         if input.KeyCode == binds.noclip then states.noclip = not states.noclip end
         if input.KeyCode == binds.infJump then states.infJump = not states.infJump end
-        if input.KeyCode == binds.savePos then savedPosition = player.Character.HumanoidRootPart.CFrame statusLabel.Text = "Saved!" end
+        if input.KeyCode == binds.savePos then savedPosition = player.Character.HumanoidRootPart.CFrame end
         if input.KeyCode == binds.tpPos and savedPosition then player.Character.HumanoidRootPart.CFrame = savedPosition end
     end
 end)
