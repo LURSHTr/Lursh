@@ -3,16 +3,17 @@ local gui = player:WaitForChild("PlayerGui")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local camera = workspace.CurrentCamera
 
 -- Bağlantıları tutmak için tablo
 local connections = {}
+local tracerLines = {}
 
 -- STATES & DEFAULTS
-local states = { flying = false, noclip = false, infJump = false }
+local states = { flying = false, noclip = false, infJump = false, espEnabled = false, tracersEnabled = false }
 local binds = { flying = Enum.KeyCode.F, noclip = Enum.KeyCode.N, infJump = Enum.KeyCode.J }
 local settings = { walkSpeed = 16, jumpPower = 50, flySpeed = 50 }
-local espEnabled = false
-local currentESPColor = Color3.fromRGB(175, 238, 238) -- Varsayılan Buz Mavisi
+local currentESPColor = Color3.fromRGB(175, 238, 238)
 local iceBlue = Color3.fromRGB(175, 238, 238)
 local bindingTarget = nil
 
@@ -31,7 +32,6 @@ mainFrame.Position = UDim2.new(0.5, -190, 0.5, -240)
 mainFrame.BackgroundColor3 = Color3.fromRGB(12,12,12)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0,12)
 
--- Topbar
 local topBar = Instance.new("Frame")
 topBar.Parent = mainFrame
 topBar.Size = UDim2.new(1,0,0,40)
@@ -47,7 +47,7 @@ title.TextColor3 = iceBlue
 title.Font = Enum.Font.GothamBold
 title.TextSize = 18
 
--- Sürükleme Mantığı
+-- Sürükleme
 local dragging, dragStart, startPos
 connections.DragStart = topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
 connections.DragChange = UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
@@ -156,27 +156,29 @@ local infBtn = createBtn("InfJump: OFF", 210, mainPage, function() states.infJum
 
 createBtn("CLOSE GUI (UNLOAD)", 330, mainPage, function() 
     for _, conn in pairs(connections) do if conn then conn:Disconnect() end end
-    states.flying = false states.noclip = false states.infJump = false espEnabled = false
+    for _, line in pairs(tracerLines) do line:Remove() end
+    states.flying = false states.noclip = false states.infJump = false states.espEnabled = false states.tracersEnabled = false
     screen:Destroy()
 end)
 
 ------------------------------------------------
--- VISUALS PAGE (ESP + COLOR PALETTE)
+-- VISUALS PAGE
 ------------------------------------------------
-local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() espEnabled = not espEnabled end)
+local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
+local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
 
 local colorLabel = Instance.new("TextLabel", visualsPage)
 colorLabel.Size = UDim2.new(0, 300, 0, 20)
-colorLabel.Position = UDim2.new(0.5, -150, 0, 55)
+colorLabel.Position = UDim2.new(0.5, -150, 0, 100)
 colorLabel.BackgroundTransparency = 1
-colorLabel.Text = "ESP COLOR PALETTE"
+colorLabel.Text = "ESP & TRACER COLOR"
 colorLabel.TextColor3 = Color3.new(1,1,1)
 colorLabel.Font = Enum.Font.GothamBold
 colorLabel.TextSize = 12
 
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 45)
-colorGrid.Position = UDim2.new(0.5, -150, 0, 80)
+colorGrid.Position = UDim2.new(0.5, -150, 0, 125)
 colorGrid.BackgroundTransparency = 1
 local layout = Instance.new("UIListLayout", colorGrid)
 layout.FillDirection = Enum.FillDirection.Horizontal
@@ -188,7 +190,7 @@ local palette = {
     Color3.fromRGB(255, 50, 50),   -- Red
     Color3.fromRGB(50, 255, 50),   -- Green
     Color3.fromRGB(255, 255, 50),  -- Yellow
-    Color3.fromRGB(255, 50, 255),  -- Pink/Purple
+    Color3.fromRGB(255, 50, 255),  -- Pink
     Color3.fromRGB(255, 255, 255)  -- White
 }
 
@@ -238,15 +240,25 @@ createBind("InfJump Toggle", 100, "infJump")
 ------------------------------------------------
 -- LOGICS & LOOPS
 ------------------------------------------------
+local function createTracer(targetPlayer)
+    local line = Drawing.new("Line")
+    line.Thickness = 1
+    line.Transparency = 1
+    line.Color = currentESPColor
+    tracerLines[targetPlayer.Name] = line
+    return line
+end
+
 local bv, bg
 connections.MainLoop = RunService.RenderStepped:Connect(function()
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
     noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
     infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
-    espBtn.Text = "ESP: "..(espEnabled and "ON" or "OFF")
+    espBtn.Text = "ESP: "..(states.espEnabled and "ON" or "OFF")
+    tracerBtn.Text = "Tracers: "..(states.tracersEnabled and "ON" or "OFF")
 
     local char = player.Character
-    -- Fly Logic
+    -- Fly/Noclip Logic
     if states.flying and char and char:FindFirstChild("HumanoidRootPart") then
         if not bv then
             bv = Instance.new("BodyVelocity", char.HumanoidRootPart)
@@ -271,21 +283,37 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         if char and char:FindFirstChild("Humanoid") then char.Humanoid.PlatformStand = false end
     end
 
-    -- Noclip Logic
     if states.noclip and char then
         for _,v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
     end
 
-    -- ESP Logic
+    -- Visuals (ESP & Tracers)
     for _,p in pairs(Players:GetPlayers()) do
-        if p ~= player and p.Character then
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            -- ESP Highlight
             local h = p.Character:FindFirstChild("LurshESP")
-            if espEnabled then
+            if states.espEnabled then
                 if not h then h = Instance.new("Highlight", p.Character) h.Name = "LurshESP" end
                 h.FillColor = currentESPColor
-            elseif h then
-                h:Destroy()
+            elseif h then h:Destroy() end
+
+            -- Tracers
+            local line = tracerLines[p.Name] or createTracer(p)
+            if states.tracersEnabled then
+                local pos, onScreen = camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    line.From = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y)
+                    line.To = Vector2.new(pos.X, pos.Y)
+                    line.Color = currentESPColor
+                    line.Visible = true
+                else
+                    line.Visible = false
+                end
+            else
+                line.Visible = false
             end
+        elseif tracerLines[p.Name] then
+            tracerLines[p.Name].Visible = false
         end
     end
 end)
