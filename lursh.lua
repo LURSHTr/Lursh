@@ -10,6 +10,7 @@ local connections = {}
 local tracerLines = {}
 local nameTags = {}
 local savedPosition = nil 
+local isUnloaded = false
 
 -- STATES & DEFAULTS
 local states = { 
@@ -45,14 +46,13 @@ end
 -- GUI SETUP
 ------------------------------------------------
 local screen = Instance.new("ScreenGui")
-screen.Name = "KingPremiumV3_PositionFix"
+screen.Name = "KingPremiumV3_Final_Fixed"
 screen.Parent = gui
 screen.ResetOnSpawn = false
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Parent = screen
 mainFrame.Size = UDim2.new(0, 380, 0, 500)
--- POZİSYON AYARI: Ekranın en solunda (0) ve dikeyde tam ortasında (0.5) başlar
 mainFrame.Position = UDim2.new(0, 10, 0.5, -250) 
 mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
@@ -77,11 +77,34 @@ title.TextColor3 = currentESPColor
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 20
 
--- Sürükleme Mantığı
+-- Sürükleme
 local dragging, dragStart, startPos
 topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
 UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
 UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+
+------------------------------------------------
+-- THEME REFRESHER (Kapsamlı ve Filtreli)
+------------------------------------------------
+local function updateTheme(newColor)
+    currentESPColor = newColor
+    title.TextColor3 = newColor
+    frameStroke.Color = newColor
+    
+    for _, v in pairs(mainFrame:GetDescendants()) do
+        -- Normal butonlar (Bind butonları ve Renk paleti hariç)
+        if v:IsA("TextButton") then
+            if v.Name == "ActionBtn" then 
+                v.BackgroundColor3 = newColor
+            elseif v.Name == "CloseBtn" then
+                v.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Kapatma butonu hep kırmızı
+            end
+        -- Slider içleri
+        elseif v:IsA("Frame") and v.Name == "SliderInner" then
+            v.BackgroundColor3 = newColor
+        end
+    end
+end
 
 ------------------------------------------------
 -- PAGES
@@ -126,24 +149,20 @@ local tpPage = createPage("TP")
 mainPage.Visible = true
 
 ------------------------------------------------
--- COMPONENTS (MODERN NEON)
+-- COMPONENTS
 ------------------------------------------------
-local function createBtn(text, y, parent, callback)
+local function createBtn(text, y, parent, callback, isClose)
     local b = Instance.new("TextButton", parent)
+    b.Name = isClose and "CloseBtn" or "ActionBtn"
     b.Size = UDim2.new(0, 300, 0, 35)
     b.Position = UDim2.new(0.5, -150, 0, y)
-    b.BackgroundColor3 = currentESPColor
+    b.BackgroundColor3 = isClose and Color3.fromRGB(255, 50, 50) or currentESPColor
     b.Text = text
     b.TextColor3 = Color3.fromRGB(0, 0, 0)
     b.Font = Enum.Font.GothamBlack
     b.TextSize = 12
     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
     
-    local glow = Instance.new("UIStroke", b)
-    glow.Color = Color3.new(1,1,1)
-    glow.Thickness = 2
-    glow.Transparency = 0.6
-
     b.MouseButton1Click:Connect(callback)
     return b
 end
@@ -155,6 +174,7 @@ local function createSlider(parent, text, y, max, default, callback)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     Instance.new("UICorner", frame)
     local inner = Instance.new("Frame", frame)
+    inner.Name = "SliderInner"
     inner.Size = UDim2.new(default/max, 0, 1, 0)
     inner.BackgroundColor3 = currentESPColor
     Instance.new("UICorner", inner)
@@ -180,19 +200,32 @@ local function createSlider(parent, text, y, max, default, callback)
     return inner
 end
 
--- PAGE CONTENT (MAIN, VISUALS, ETC.)
-local wsSlider = createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
-local jpSlider = createSlider(mainPage, "Jump Power", 50, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
-local fsSlider = createSlider(mainPage, "Fly Speed", 90, 500, 50, function(v) settings.flySpeed = v end)
+-- MAIN PAGE
+createSlider(mainPage, "Walk Speed", 10, 200, 16, function(v) settings.walkSpeed = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.WalkSpeed = v end end)
+createSlider(mainPage, "Jump Power", 50, 300, 50, function(v) settings.jumpPower = v if player.Character and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid.JumpPower = v end end)
+createSlider(mainPage, "Fly Speed", 90, 500, 50, function(v) settings.flySpeed = v end)
 local flyBtn = createBtn("Fly: OFF", 135, mainPage, function() states.flying = not states.flying end)
 local noclipBtn = createBtn("Noclip: OFF", 180, mainPage, function() states.noclip = not states.noclip end)
 local infBtn = createBtn("InfJump: OFF", 225, mainPage, function() states.infJump = not states.infJump end)
 
+createBtn("CLOSE GUI (UNLOAD)", 320, mainPage, function()
+    isUnloaded = true
+    screen:Destroy()
+    if FOVCircle then FOVCircle:Remove() end
+    for _, v in pairs(connections) do v:Disconnect() end
+    for _, line in pairs(tracerLines) do line:Remove() end
+    for _, tag in pairs(nameTags) do tag:Remove() end
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
+        player.Character.Humanoid.WalkSpeed = 16
+        player.Character.Humanoid.JumpPower = 50
+    end
+end, true)
+
+-- VISUALS PAGE
 local espBtn = createBtn("ESP: OFF", 10, visualsPage, function() states.espEnabled = not states.espEnabled end)
 local tracerBtn = createBtn("Tracers: OFF", 55, visualsPage, function() states.tracersEnabled = not states.tracersEnabled end)
 local nameBtn = createBtn("Names: OFF", 100, visualsPage, function() states.namesEnabled = not states.namesEnabled end)
 
--- RENK PALETI
 local colorGrid = Instance.new("Frame", visualsPage)
 colorGrid.Size = UDim2.new(0, 300, 0, 40)
 colorGrid.Position = UDim2.new(0.5, -150, 0, 150)
@@ -204,52 +237,51 @@ colorGrid.UIListLayout.Padding = UDim.new(0, 8)
 local palette = {Color3.fromRGB(0, 255, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
 for _, color in pairs(palette) do
     local cBtn = Instance.new("TextButton", colorGrid)
+    cBtn.Name = "PaletteColor" -- İsmi farklı ki updateTheme bunu değiştirmesin
     cBtn.Size = UDim2.new(0, 30, 0, 30)
     cBtn.BackgroundColor3 = color
     cBtn.Text = ""
     Instance.new("UICorner", cBtn)
     cBtn.MouseButton1Click:Connect(function() 
-        currentESPColor = color 
-        title.TextColor3 = color 
-        frameStroke.Color = color
-        flyBtn.BackgroundColor3 = color
-        noclipBtn.BackgroundColor3 = color
-        infBtn.BackgroundColor3 = color
-        wsSlider.BackgroundColor3 = color
-        jpSlider.BackgroundColor3 = color
-        fsSlider.BackgroundColor3 = color
+        updateTheme(color)
     end)
 end
 
--- TP & BIND (FIXED)
+-- TP PAGE
 local statusLabel = Instance.new("TextLabel", tpPage)
 statusLabel.Size = UDim2.new(0, 300, 0, 30) statusLabel.Position = UDim2.new(0.5, -150, 0, 10)
 statusLabel.BackgroundTransparency = 1 statusLabel.Text = "No Position Saved" statusLabel.TextColor3 = Color3.new(1,1,1)
 statusLabel.Font = Enum.Font.GothamBold statusLabel.TextSize = 12
-
 createBtn("SAVE CURRENT POS", 55, tpPage, function() if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then savedPosition = player.Character.HumanoidRootPart.CFrame statusLabel.Text = "KING SAVED POS!" statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0) end end)
 createBtn("TELEPORT TO SAVED", 105, tpPage, function() if savedPosition and player.Character then player.Character.HumanoidRootPart.CFrame = savedPosition end end)
 createBtn("DELETE WAYPOINT", 155, tpPage, function() savedPosition = nil statusLabel.Text = "Position Purged" statusLabel.TextColor3 = Color3.fromRGB(255, 100, 0) end)
 
+-- BIND PAGE
 local function createBindRow(text, y, keyName)
     local label = Instance.new("TextLabel", bindPage)
     label.Size = UDim2.new(0, 150, 0, 25) label.Position = UDim2.new(0, 40, 0, y)
     label.Text = text label.TextColor3 = Color3.new(1,1,1) label.Font = Enum.Font.GothamBold label.TextSize = 10 label.TextXAlignment = Enum.TextXAlignment.Left
+    
     local bBox = Instance.new("TextButton", bindPage)
+    bBox.Name = "BindKeyDisplay" -- İsmi farklı, rengi updateTheme ile değişmeyecek
     bBox.Size = UDim2.new(0, 100, 0, 25) bBox.Position = UDim2.new(0, 200, 0, y)
-    bBox.BackgroundColor3 = Color3.fromRGB(30,30,30) bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
-    bBox.TextColor3 = currentESPColor bBox.TextSize = 10 Instance.new("UICorner", bBox)
+    bBox.BackgroundColor3 = Color3.fromRGB(30,30,30) 
+    bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
+    bBox.TextColor3 = Color3.fromRGB(255, 255, 255) -- Tuş rengi hep beyaz kalsın
+    bBox.TextSize = 10 Instance.new("UICorner", bBox)
     bBox.MouseButton1Click:Connect(function() bindingTarget = keyName bBox.Text = "..." end)
     
-    RunService.RenderStepped:Connect(function()
-        bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
-        bBox.TextColor3 = currentESPColor
+    connections[text.."Bind"] = RunService.RenderStepped:Connect(function()
+        if isUnloaded then return end
+        if bindingTarget ~= keyName then
+            bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
+        end
     end)
 end
 createBindRow("Fly", 10, "flying"); createBindRow("Noclip", 40, "noclip"); createBindRow("InfJump", 70, "infJump")
 createBindRow("Save Pos", 100, "savePos"); createBindRow("TP to Pos", 130, "tpPos"); createBindRow("Aimbot Key", 160, "aimKey")
 
--- AIMBOT
+-- AIM PAGE
 local aimBtn = createBtn("Aimbot: OFF", 10, aimPage, function() states.aimbotEnabled = not states.aimbotEnabled end)
 local teamBtn = createBtn("Team Check: OFF", 55, aimPage, function() states.aimbotTeamCheck = not states.aimbotTeamCheck end)
 createSlider(aimPage, "Smoothness", 105, 10, 1, function(v) settings.aimSmoothness = math.max(1, v) end)
@@ -257,7 +289,7 @@ createSlider(aimPage, "FOV Radius", 145, 600, 150, function(v) settings.aimFOV =
 local FOVCircle = createDrawing("Circle", {Thickness = 1, Transparency = 0.7, Color = currentESPColor, Visible = false})
 
 ------------------------------------------------
--- LOGICS (SAME FIXES)
+-- LOGICS (DÖNGÜLER)
 ------------------------------------------------
 local function getClosest()
     local target, shortestDist = nil, settings.aimFOV
@@ -275,6 +307,7 @@ local function getClosest()
 end
 
 connections.NoclipLoop = RunService.Stepped:Connect(function()
+    if isUnloaded then return end
     if states.noclip and player.Character then
         for _, v in pairs(player.Character:GetDescendants()) do
             if v:IsA("BasePart") and v.CanCollide then v.CanCollide = false end
@@ -283,6 +316,7 @@ connections.NoclipLoop = RunService.Stepped:Connect(function()
 end)
 
 connections.MainLoop = RunService.RenderStepped:Connect(function()
+    if isUnloaded then return end
     flyBtn.Text = "Fly: "..(states.flying and "ON" or "OFF")
     noclipBtn.Text = "Noclip: "..(states.noclip and "ON" or "OFF")
     infBtn.Text = "InfJump: "..(states.infJump and "ON" or "OFF")
@@ -328,9 +362,6 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
         if target then camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, target.Character.Head.Position), 1/settings.aimSmoothness) end
     end
 
-    for name, line in pairs(tracerLines) do if not Players:FindFirstChild(name) then line:Remove() tracerLines[name] = nil end end
-    for name, tag in pairs(nameTags) do if not Players:FindFirstChild(name) then tag:Remove() nameTags[name] = nil end end
-
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = p.Character.HumanoidRootPart
@@ -362,6 +393,7 @@ connections.MainLoop = RunService.RenderStepped:Connect(function()
 end)
 
 UIS.InputBegan:Connect(function(input, gpe)
+    if isUnloaded then return end
     if bindingTarget then
         binds[bindingTarget] = input.KeyCode ~= Enum.KeyCode.Unknown and input.KeyCode or input.UserInputType
         bindingTarget = nil return
@@ -376,4 +408,8 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
-UIS.JumpRequest:Connect(function() if states.infJump and player.Character:FindFirstChild("Humanoid") then player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end end)
+UIS.JumpRequest:Connect(function() 
+    if not isUnloaded and states.infJump and player.Character:FindFirstChild("Humanoid") then 
+        player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) 
+    end 
+end)
