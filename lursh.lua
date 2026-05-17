@@ -53,7 +53,11 @@ screen.ResetOnSpawn = false
 local mainFrame = Instance.new("Frame")
 mainFrame.Parent = screen
 mainFrame.Size = UDim2.new(0, 380, 0, 500)
-mainFrame.Position = UDim2.new(0, 10, 0.5, -250) 
+
+-- ORTALAMA İÇİN EN GARANTİ AYAR:
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) 
+
 mainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
 
@@ -77,11 +81,29 @@ title.TextColor3 = currentESPColor
 title.Font = Enum.Font.GothamBlack
 title.TextSize = 20
 
--- Sürükleme
+-- KUSURSUZLAŞTIRILMIŞ SÜRÜKLEME SİSTEMİ
 local dragging, dragStart, startPos
-topBar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true dragStart = i.Position startPos = mainFrame.Position end end)
-UIS.InputChanged:Connect(function(i) if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then local d = i.Position - dragStart mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y) end end)
-UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+topBar.InputBegan:Connect(function(i) 
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then 
+        dragging = true 
+        dragStart = i.Position 
+        startPos = mainFrame.AbsolutePosition -- AbsolutePosition kullanarak kaymayı önledik
+    end 
+end)
+
+UIS.InputChanged:Connect(function(i) 
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then 
+        local d = i.Position - dragStart 
+        -- AnchorPoint (0.5, 0.5) olduğu için merkeze göre offset hesabı:
+        mainFrame.Position = UDim2.new(0, startPos.X + d.X + (mainFrame.Size.X.Offset / 2), 0, startPos.Y + d.Y + (mainFrame.Size.Y.Offset / 2)) 
+    end 
+end)
+
+UIS.InputEnded:Connect(function(i) 
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then 
+        dragging = false 
+    end 
+end)
 
 ------------------------------------------------
 -- THEME REFRESHER (Kapsamlı ve Filtreli)
@@ -92,14 +114,12 @@ local function updateTheme(newColor)
     frameStroke.Color = newColor
     
     for _, v in pairs(mainFrame:GetDescendants()) do
-        -- Normal butonlar (Bind butonları ve Renk paleti hariç)
         if v:IsA("TextButton") then
             if v.Name == "ActionBtn" then 
                 v.BackgroundColor3 = newColor
             elseif v.Name == "CloseBtn" then
-                v.BackgroundColor3 = Color3.fromRGB(255, 50, 50) -- Kapatma butonu hep kırmızı
+                v.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
             end
-        -- Slider içleri
         elseif v:IsA("Frame") and v.Name == "SliderInner" then
             v.BackgroundColor3 = newColor
         end
@@ -237,7 +257,7 @@ colorGrid.UIListLayout.Padding = UDim.new(0, 8)
 local palette = {Color3.fromRGB(0, 255, 255), Color3.fromRGB(255, 50, 50), Color3.fromRGB(50, 255, 50), Color3.fromRGB(255, 255, 50), Color3.fromRGB(255, 50, 255), Color3.fromRGB(255, 255, 255)}
 for _, color in pairs(palette) do
     local cBtn = Instance.new("TextButton", colorGrid)
-    cBtn.Name = "PaletteColor" -- İsmi farklı ki updateTheme bunu değiştirmesin
+    cBtn.Name = "PaletteColor"
     cBtn.Size = UDim2.new(0, 30, 0, 30)
     cBtn.BackgroundColor3 = color
     cBtn.Text = ""
@@ -263,11 +283,11 @@ local function createBindRow(text, y, keyName)
     label.Text = text label.TextColor3 = Color3.new(1,1,1) label.Font = Enum.Font.GothamBold label.TextSize = 10 label.TextXAlignment = Enum.TextXAlignment.Left
     
     local bBox = Instance.new("TextButton", bindPage)
-    bBox.Name = "BindKeyDisplay" -- İsmi farklı, rengi updateTheme ile değişmeyecek
+    bBox.Name = "BindKeyDisplay"
     bBox.Size = UDim2.new(0, 100, 0, 25) bBox.Position = UDim2.new(0, 200, 0, y)
     bBox.BackgroundColor3 = Color3.fromRGB(30,30,30) 
     bBox.Text = tostring(binds[keyName]):gsub("Enum.KeyCode.", ""):gsub("Enum.UserInputType.", "")
-    bBox.TextColor3 = Color3.fromRGB(255, 255, 255) -- Tuş rengi hep beyaz kalsın
+    bBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     bBox.TextSize = 10 Instance.new("UICorner", bBox)
     bBox.MouseButton1Click:Connect(function() bindingTarget = keyName bBox.Text = "..." end)
     
@@ -412,4 +432,12 @@ UIS.JumpRequest:Connect(function()
     if not isUnloaded and states.infJump and player.Character:FindFirstChild("Humanoid") then 
         player.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) 
     end 
+end)
+
+-- EKRAN ORTALAMAYI KESİNLEŞTİRMEK İÇİN SON KONTROL (ZORLAMA SURUMU):
+task.spawn(function()
+    for i = 1, 5 do
+        mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        task.wait(0.1)
+    end
 end)
